@@ -21,6 +21,7 @@ using namespace std;
 
 void EnsureWalletIsUnlocked();
 
+
 namespace bt = boost::posix_time;
 
 // Extended DecodeDumpTime implementation, see this page for details:
@@ -34,6 +35,7 @@ const std::locale formats[] = {
 };
 
 const size_t formats_n = sizeof(formats)/sizeof(formats[0]);
+CWallet* pwalletImport;
 
 std::time_t pt_to_time_t(const bt::ptime& pt)
 {
@@ -335,3 +337,84 @@ Value dumpwallet(const Array& params, bool fHelp)
     file.close();
     return Value::null;
 }
+
+Value importwalletdat(const Array& params, bool fHelp)
+{
+    if (fHelp)
+        throw runtime_error(
+            "importwalletdat <file> \n"
+            "Import wallet.dat from BTC/LTC/DOGE \n"
+        );
+
+    EnsureWalletIsUnlocked();
+
+    bool fFirstRun = false;
+    bool fRescan=true;
+
+    pwalletImport = new CWallet(params[0].get_str().c_str());
+    DBErrors nLoadWalletRet = pwalletImport->LoadWalletImport(fFirstRun);
+
+    if (nLoadWalletRet != DB_LOAD_OK)
+            throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
+
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+        LOCK(pwalletImport->cs_wallet);
+
+        //map<CBitcoinAddress,CKeyDump> mapDump;
+        std::set<CKeyID> setKeys;
+        pwalletImport->GetKeys(setKeys);
+
+        BOOST_FOREACH(const CKeyID &keyid, setKeys) {
+            bool IsCompressed;
+            std::string strAddr = CBitcoinAddress(keyid).ToString();
+            std::string strLabel = "importwallet";
+
+            CKey key;
+            if (pwalletImport->GetKey(keyid, key)) {
+
+                CSecret secret = key.GetSecret(IsCompressed);
+                //key.SetSecret(secret, IsCompressed);
+
+                pwalletMain->AddKey(key);
+                pwalletMain->SetAddressBookName(keyid, strLabel);
+                //mapDump[*it] = CKeyDump(key.GetSecret());
+            }
+        }
+    }
+    if (fRescan) {
+        printf("recanning: ...\n");
+        pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
+        pwalletMain->ReacceptWalletTransactions();
+    }
+
+    printf("import: done\n");
+    UnregisterWallet(pwalletImport);
+    delete pwalletImport;
+    return Value::null;
+}
+
+/*
+                CBitcoinSecret vchSecret;
+                if (!vchSecret.SetString(vstr[0]))
+                continue;
+
+                bool fCompressed;
+                CKey key;
+                CSecret secret = vchSecret.GetSecret(fCompressed);
+
+                key.SetSecret(secret, fCompressed);
+                CKeyID keyid = key.GetPubKey().GetID();
+
+                vector<unsigned char> vchPubKey = key.GetPubKey();
+                CBitcoinAddress address(vchPubKey);
+
+                string strAddress = address.ToString();
+                printf("import: added address %s\n",strAddress.c_str());
+                
+                pprintf("Importing %s...\n", CBitcoinAddress(keyid).ToString().c_str());
+                 if (!pwalletMain->AddKey(key)) {
+                    fGood = false;
+                    continue;
+                 }
+*/
