@@ -1553,6 +1553,40 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     return true;
 }
 
+bool CWallet::GetExpectedStakeTime(uint64_t& nExpected)
+{
+    unsigned int nBits = GetNextTargetRequired(pindexBest, true);
+    CBigNum bnTarget;
+    bnTarget.SetCompact(nBits);
+    int64_t nBalance = GetBalance();
+    set<pair<const CWalletTx*,unsigned int> > setCoins;
+    int64_t nValueIn = 0;
+    double fail = 1;
+
+    if (!SelectCoinsSimple(nBalance, GetTime(), nCoinbaseMaturity + 10, setCoins, nValueIn))
+        return false;
+
+    CTxDB txdb("r");
+    BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
+    {
+        CTxIndex txindex;
+        {
+            LOCK2(cs_main, cs_wallet);
+            if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
+                continue;
+        }
+
+        // p(A or B) = p(not((not A) and (not B))) = 1 - (p(1 - A) * p(1 - B))
+        int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetTime());
+        CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
+        CBigNum bnTries(CBigNum(~uint256(0)) / (bnCoinDayWeight * bnTarget));
+        fail *= 1 - 1.0/bnTries.getulong();
+    }
+
+    nExpected = 1 / (1 - fail);
+    return true;
+}
+
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
 {
     CBlockIndex* pindexPrev = pindexBest;
