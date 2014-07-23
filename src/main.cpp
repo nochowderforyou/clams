@@ -1186,6 +1186,8 @@ static unsigned int GetNextTargetRequiredV3(const CBlockIndex* pindexLast, bool 
 
 	if (!pindex || !pindex->nHeight)
 		count--;
+	else
+		pindexPrevPrev = pindex;
 
     if (count < 2)
         return bnTargetLimit.GetCompact(); // not enough blocks yet
