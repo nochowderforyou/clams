@@ -1022,7 +1022,7 @@ int64_t GetProofOfStakeReward(const CBlockIndex* pindex, int64_t nCoinAge, int64
  
         //Create our reward coEfficient
         double randCoefficient = (double)random / (double)randSpan;
-    	double nCoefficient = pow(randCoefficient, multFactor);
+        double nCoefficient = pow(randCoefficient, multFactor);
  
         int64_t nSubsidy = ceil(((maxReward - minReward) * nCoefficient) + minReward);
  
@@ -1177,17 +1177,17 @@ static unsigned int GetNextTargetRequiredV3(const CBlockIndex* pindexLast, bool 
     int64_t count = 0;
 
     for (pindex = pindexPrev; pindex && pindex->nHeight && count < nInterval; pindex = GetLastBlockIndex(pindex, fProofOfStake)) {
-		pindexPrevPrev = pindex;
+        pindexPrevPrev = pindex;
         pindex = pindex->pprev;
         if (!pindex) break;
         count++;
         pindex = GetLastBlockIndex(pindex, fProofOfStake);
     }
 
-	if (!pindex || !pindex->nHeight)
-		count--;
-	else
-		pindexPrevPrev = pindex;
+    if (!pindex || !pindex->nHeight)
+        count--;
+    else
+        pindexPrevPrev = pindex;
 
     if (count < 2)
         return bnTargetLimit.GetCompact(); // not enough blocks yet
