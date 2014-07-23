@@ -1579,8 +1579,10 @@ bool CWallet::GetExpectedStakeTime(uint64_t& nExpected)
         // p(A or B) = p(not((not A) and (not B))) = 1 - (p(1 - A) * p(1 - B))
         int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetTime());
         CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
-        CBigNum bnTries(CBigNum(~uint256(0)) / (bnCoinDayWeight * bnTarget));
-        fail *= 1 - 1.0/bnTries.getulong();
+		if (bnCoinDayWeight != 0) {
+			CBigNum bnTries(CBigNum(~uint256(0)) / (bnCoinDayWeight * bnTarget));
+			fail *= 1 - 1.0/bnTries.getulong();
+		}
     }
 
     nExpected = 1 / (1 - fail);
