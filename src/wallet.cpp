@@ -1117,6 +1117,12 @@ void CWallet::AvailableCoinsMinConf(vector<COutput>& vCoins, int nConf) const
             if (!pcoin->IsFinal())
                 continue;
 
+            if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
+                continue;
+ 
+            if (pcoin->IsCoinStake() && pcoin->GetBlocksToMaturity() > 0)
+                continue;
+ 
             if(pcoin->GetDepthInMainChain() < nConf)
                 continue;
 
@@ -1510,7 +1516,7 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     set<pair<const CWalletTx*,unsigned int> > setCoins;
     int64_t nValueIn = 0;
 
-    if (!SelectCoinsSimple(nBalance - nReserveBalance, GetTime(), nCoinbaseMaturity + 10, setCoins, nValueIn))
+    if (!SelectCoinsSimple(nBalance - nReserveBalance, GetTime(), 1, setCoins, nValueIn))
         return false;
 
     if (setCoins.empty())
@@ -1563,7 +1569,7 @@ bool CWallet::GetExpectedStakeTime(uint64_t& nExpected)
     int64_t nValueIn = 0;
     double fail = 1;
 
-    if (!SelectCoinsSimple(nBalance, GetTime(), nCoinbaseMaturity + 10, setCoins, nValueIn))
+    if (!SelectCoinsSimple(nBalance, GetTime(), 1, setCoins, nValueIn))
         return false;
 
     CTxDB txdb("r");
@@ -1615,7 +1621,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     int64_t nValueIn = 0;
 
     // Select coins with suitable depth
-    if (!SelectCoinsSimple(nBalance - nReserveBalance, txNew.nTime, nCoinbaseMaturity + 10, setCoins, nValueIn))
+    if (!SelectCoinsSimple(nBalance - nReserveBalance, txNew.nTime, 1, setCoins, nValueIn))
         return false;
 
     if (setCoins.empty())
