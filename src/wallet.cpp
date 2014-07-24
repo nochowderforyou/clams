@@ -1123,8 +1123,14 @@ void CWallet::AvailableCoinsMinConf(vector<COutput>& vCoins, int nConf) const
             if (!pcoin->IsFinal())
                 continue;
 
-            if(pcoin->GetDepthInMainChain() < nConf)
-                continue;
+            if(pcoin->IsCoinStake()){
+                if(pcoin->GetDepthInMainChain() < nConf)
+                    continue;
+            } else {
+                if(pcoin->GetDepthInMainChain() < 10)
+                    continue;
+            }
+
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue)
