@@ -124,20 +124,23 @@ bool CCryptoKeyStore::AddKey(const CKey& key)
 {
     {
         LOCK(cs_KeyStore);
-        if (!IsCrypted())
+        if (!IsCrypted()) {
             return CBasicKeyStore::AddKey(key);
+        }
 
-        if (IsLocked())
+        if (IsLocked()) {
             return false;
+        }
 
         std::vector<unsigned char> vchCryptedSecret;
         CPubKey vchPubKey = key.GetPubKey();
         bool fCompressed;
-        if (!EncryptSecret(vMasterKey, key.GetSecret(fCompressed), vchPubKey.GetHash(), vchCryptedSecret))
+        if (!EncryptSecret(vMasterKey, key.GetSecret(fCompressed), vchPubKey.GetHash(), vchCryptedSecret)) {
             return false;
-
-        if (!AddCryptedKey(key.GetPubKey(), vchCryptedSecret))
+        }
+        if (!AddCryptedKey(key.GetPubKey(), vchCryptedSecret)) {
             return false;
+        }
     }
     return true;
 }
@@ -147,8 +150,9 @@ bool CCryptoKeyStore::AddCryptedKey(const CPubKey &vchPubKey, const std::vector<
 {
     {
         LOCK(cs_KeyStore);
-        if (!SetCrypted())
+        if (!SetCrypted()) {
             return false;
+        }
 
         mapCryptedKeys[vchPubKey.GetID()] = make_pair(vchPubKey, vchCryptedSecret);
     }
@@ -164,14 +168,17 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CKey& keyOut) const
 
         CryptedKeyMap::const_iterator mi = mapCryptedKeys.find(address);
         if (mi != mapCryptedKeys.end())
-        {
+        {   
             const CPubKey &vchPubKey = (*mi).second.first;
             const std::vector<unsigned char> &vchCryptedSecret = (*mi).second.second;
             CSecret vchSecret;
-            if (!DecryptSecret(vMasterKey, vchCryptedSecret, vchPubKey.GetHash(), vchSecret))
+            if (!DecryptSecret(vMasterKey, vchCryptedSecret, vchPubKey.GetHash(), vchSecret)) {
+                printf("Decryptsecret failed: Your current wallet password must match the password of the wallet your importing.\n");
                 return false;
-            if (vchSecret.size() != 32)
+            }
+            if (vchSecret.size() != 32) {
                 return false;
+            }
             keyOut.SetPubKey(vchPubKey);
             keyOut.SetSecret(vchSecret);
             return true;

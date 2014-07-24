@@ -2,45 +2,41 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-TARGET_PLATFORM:=i586
+TARGET_PLATFORM:=i686
 #TARGET_PLATFORM:=x86_64
-DEPSDIR:=/usr/i586-mingw32msvc
 
-CC:=$(TARGET_PLATFORM)-mingw32msvc-gcc
-CXX:=$(TARGET_PLATFORM)-mingw32msvc-g++
-RANLIB=$(TARGET_PLATFORM)-mingw32msvc-ranlib
-STRIP=$(TARGET_PLATFORM)-mingw32msvc-strip
+DEPSDIR:=/usr/$(TARGET_PLATFORM)-w64-mingw32
+CC:=$(TARGET_PLATFORM)-w64-mingw32-gcc
+CXX:=$(TARGET_PLATFORM)-w64-mingw32-g++
+RANLIB=$(TARGET_PLATFORM)-w64-mingw32-ranlib
+STRIP=$(TARGET_PLATFORM)-w64-mingw32-strip
 
 USE_UPNP:=0
-USE_IPV6:=1
 
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
  -I"$(CURDIR)"/obj \
- -I"$(DEPSDIR)/boost_1_47_0" \
- -I"$(DEPSDIR)/db-4.8.30.NC/build_unix" \
- -I"$(DEPSDIR)/openssl-1.0.1g/include" \
+ -I"$(DEPSDIR)/include" \
  -I"$(DEPSDIR)"
 
 LIBPATHS= \
- -L"$(DEPSDIR)/boost_1_47_0/stage/lib" \
- -L"$(DEPSDIR)/db-4.8.30.NC/build_unix" \
- -L"$(DEPSDIR)/openssl-1.0.1g"
+ -L"$(DEPSDIR)/lib"
 
 LIBS= \
- -l boost_system-mt-s \
- -l boost_filesystem-mt-s \
- -l boost_program_options-mt-s \
- -l boost_thread_win32-mt-s \
- -l boost_chrono-mt-s \
+ -l boost_system-mt \
+ -l boost_filesystem-mt \
+ -l boost_program_options-mt \
+ -l boost_thread_win32-mt \
+ -l boost_chrono-mt \
  -l db_cxx \
  -l ssl \
- -l crypto
+ -l crypto \
+ -l z
 
 DEFS=-D_MT -DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB -DBOOST_SPIRIT_THREADSAFE
 DEBUGFLAGS=-g
-CFLAGS=-O3 -msse2 -w -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
-LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -static-libgcc 
+CFLAGS=-O3 -msse2 -w -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
+LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -static-libgcc -static-libstdc++
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -49,10 +45,6 @@ ifneq (${USE_UPNP}, -)
 	LIBPATHS += -L"$(DEPSDIR)/miniupnpc"
 	LIBS += -l miniupnpc -l iphlpapi
 	DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
-endif
-
-ifneq (${USE_IPV6}, -)
-	DEFS += -DUSE_IPV6=$(USE_IPV6)
 endif
 
 LIBS += -l mingwthrd -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell32 -l comctl32 -l ole32 -l oleaut32 -l uuid -l rpcrt4 -l advapi32 -l ws2_32 -l mswsock -l shlwapi

@@ -61,12 +61,17 @@ bool CWallet::AddKey(const CKey& key)
 {
     CPubKey pubkey = key.GetPubKey();
 
-    if (!CCryptoKeyStore::AddKey(key))
+    if (!CCryptoKeyStore::AddKey(key)) {
+        printf("InAddKeys\n");
         return false;
-    if (!fFileBacked)
+    }
+    if (!fFileBacked) {
         return true;
-    if (!IsCrypted())
+    }
+    if (!IsCrypted()) {
+        printf("not encrypted?\n");
         return CWalletDB(strWalletFile).WriteKey(pubkey, key.GetPrivKey(), mapKeyMetadata[pubkey.GetID()]);
+    }
     return true;
 }
 
@@ -839,7 +844,7 @@ bool CWalletTx::WriteToDisk()
 // Scan the block chain (starting in pindexStart) for transactions
 // from or to us. If fUpdate is true, found transactions that already
 // exist in the wallet will be updated.
-int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
+int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, bool fImport)
 {
     int ret = 0;
 
@@ -850,11 +855,12 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
         {
             // no need to read and scan block, if block was created before
             // our wallet birthday (as adjusted for block time variability)
-            if (nTimeFirstKey && (pindex->nTime < (nTimeFirstKey - 7200))) {
-                pindex = pindex->pnext;
-                continue;
+            if(!fImport) {
+                if (nTimeFirstKey && (pindex->nTime < (nTimeFirstKey - 7200))) {
+                    pindex = pindex->pnext;
+                    continue;
+                }
             }
-
             CBlock block;
             block.ReadFromDisk(pindex, true);
             BOOST_FOREACH(CTransaction& tx, block.vtx)
@@ -1116,10 +1122,15 @@ void CWallet::AvailableCoinsMinConf(vector<COutput>& vCoins, int nConf) const
 
             if (!pcoin->IsFinal())
                 continue;
-
-            if(pcoin->GetDepthInMainChain() < nConf)
-                continue;
-
+            
+            if(pcoin->IsCoinStake()) {
+                if(pcoin->GetDepthInMainChain() < nConf)
+                    continue;
+             } else { 
+                 if(pcoin->GetDepthInMainChain() < 10)
+                    continue;
+            }
+                        
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue)
                     vCoins.push_back(COutput(pcoin, i, pcoin->GetDepthInMainChain()));
@@ -1553,6 +1564,42 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     return true;
 }
 
+bool CWallet::GetExpectedStakeTime(uint64_t& nExpected)
+{
+    unsigned int nBits = GetNextTargetRequired(pindexBest, true);
+    CBigNum bnTarget;
+    bnTarget.SetCompact(nBits);
+    int64_t nBalance = GetBalance();
+    set<pair<const CWalletTx*,unsigned int> > setCoins;
+    int64_t nValueIn = 0;
+    double fail = 1;
+
+    if (!SelectCoinsSimple(nBalance, GetTime(), nCoinbaseMaturity + 10, setCoins, nValueIn))
+        return false;
+
+    CTxDB txdb("r");
+    BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
+    {
+        CTxIndex txindex;
+        {
+            LOCK2(cs_main, cs_wallet);
+            if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
+                continue;
+        }
+
+        // p(A or B) = p(not((not A) and (not B))) = 1 - (p(1 - A) * p(1 - B))
+        int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetTime());
+        CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
+		if (bnCoinDayWeight != 0) {
+			CBigNum bnTries(CBigNum(~uint256(0)) / (bnCoinDayWeight * bnTarget));
+			fail *= 1 - 1.0/bnTries.getulong();
+		}
+    }
+
+    nExpected = 1 / (1 - fail);
+    return true;
+}
+
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
 {
     CBlockIndex* pindexPrev = pindexBest;
@@ -1660,10 +1707,10 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                         break;  // unable to find corresponding public key
                     }
 
-                if (key.GetPubKey() != vchPubKey)
-                {
-                    if (fDebug && GetBoolArg("-printcoinstake"))
-                        printf("CreateCoinStake : invalid key for kernel type=%d\n", whichType);
+                    if (key.GetPubKey() != vchPubKey)
+                    {
+                        if (fDebug && GetBoolArg("-printcoinstake"))
+                            printf("CreateCoinStake : invalid key for kernel type=%d\n", whichType);
                         break; // keys mismatch
                     }
 
@@ -1697,7 +1744,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
         if (txNew.vout.size() == 2 && ((pcoin.first->vout[pcoin.second].scriptPubKey == scriptPubKeyKernel || pcoin.first->vout[pcoin.second].scriptPubKey == txNew.vout[1].scriptPubKey))
-            && pcoin.first->GetHash() != txNew.vin[0].prevout.hash)
+            && (pcoin.first->GetHash() != txNew.vin[0].prevout.hash || pcoin.second != txNew.vin[0].prevout.n))
         {
             int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)txNew.nTime);
 
@@ -1714,7 +1761,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             if (pcoin.first->vout[pcoin.second].nValue >= nStakeCombineThreshold)
                 continue;
             // Do not add input that is still too young
-            if (nTimeWeight < nStakeMinAge)
+            if (nTimeWeight < 0)
                 continue;
 
             txNew.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
@@ -1895,6 +1942,20 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     fFirstRunRet = !vchDefaultKey.IsValid();
 
     NewThread(ThreadFlushWalletDB, &strWalletFile);
+    return DB_LOAD_OK;
+}
+
+DBErrors CWallet::LoadWalletImport(bool& fFirstRunRet)
+{
+    if (!fFileBacked)
+        return DB_LOAD_OK;
+    fFirstRunRet = false;
+    DBErrors nLoadWalletRet = CWalletDB(strWalletFile,"r+").LoadWalletImport(this);
+    if (nLoadWalletRet != DB_LOAD_OK) {
+        return nLoadWalletRet;
+    }
+    fFirstRunRet = !vchDefaultKey.IsValid();
+    
     return DB_LOAD_OK;
 }
 

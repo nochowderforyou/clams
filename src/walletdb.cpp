@@ -424,6 +424,140 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
     return true;
 }
 
+
+bool
+ReadKeyValueImport(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
+             CWalletScanState &wss, string& strType, string& strErr)
+{
+    try {
+        // Unserialize
+        // Taking advantage of the fact that pair serialization
+        // is just the two items serialized one after the other
+        ssKey >> strType;
+        if (strType == "name")
+        {
+            string strAddress;
+            ssKey >> strAddress;
+            ssValue >> pwallet->mapAddressBook[CBitcoinAddress(strAddress).Get()];
+        }
+        else if (strType == "key" || strType == "wkey")
+        {
+            vector<unsigned char> vchPubKey;
+            ssKey >> vchPubKey;
+            CKey key;
+            if (strType == "key")
+            {
+                wss.nKeys++;
+                CPrivKey pkey;
+                ssValue >> pkey;
+                key.SetPubKey(vchPubKey);
+                if (!key.SetPrivKey(pkey))
+                {
+                    printf("Error reading wallet database: CPrivKey corrupt");
+                    return false;
+                }
+                if (key.GetPubKey() != vchPubKey)
+                {
+                    printf("Error reading wallet database: CPrivKey pubkey inconsistency");
+                    return false;
+                }
+                if (!key.IsValid())
+                {
+                    printf("Error reading wallet database: invalid CPrivKey");
+                    return false;
+                }
+            }
+            else
+            {
+                CWalletKey wkey;
+                ssValue >> wkey;
+                key.SetPubKey(vchPubKey);
+                if (!key.SetPrivKey(wkey.vchPrivKey))
+                {
+                    printf("Error reading wallet database: CPrivKey corrupt");
+                    return false;
+                }
+                if (key.GetPubKey() != vchPubKey)
+                {
+                    printf("Error reading wallet database: CWalletKey pubkey inconsistency");
+                    return false;
+                }
+                if (!key.IsValid())
+                {
+                    printf("Error reading wallet database: invalid CWalletKey");
+                    return false;
+                }
+            }
+            if (!pwallet->LoadKey(key))
+            {
+                printf("Error reading wallet database: LoadKey failed");
+                return false;
+            }
+        }
+        else if (strType == "mkey")
+        {
+            unsigned int nID;
+            ssKey >> nID;
+            CMasterKey kMasterKey;
+            ssValue >> kMasterKey;
+            if(pwallet->mapMasterKeys.count(nID) != 0)
+            {
+                printf("Error reading wallet database: duplicate CMasterKey id %u", nID);
+                return false;
+            }
+            pwallet->mapMasterKeys[nID] = kMasterKey;
+            if (pwallet->nMasterKeyMaxID < nID)
+                pwallet->nMasterKeyMaxID = nID;
+        }
+        else if (strType == "ckey")
+        {
+            wss.nCKeys++;
+            vector<unsigned char> vchPubKey;
+            ssKey >> vchPubKey;
+            vector<unsigned char> vchPrivKey;
+            ssValue >> vchPrivKey;
+            if (!pwallet->LoadCryptedKey(vchPubKey, vchPrivKey))
+            {
+                printf("Error reading wallet database: LoadCryptedKey failed");
+                return false;
+            }
+            wss.fIsEncrypted = true;
+        }
+        else if (strType == "pool")
+        {
+            CKey key;
+            int64_t nIndex;
+            ssKey >> nIndex;
+            CKeyPool keypool;
+            ssValue >> keypool;
+
+            CKeyID keyid = keypool.vchPubKey.GetID();
+            if(pwallet->GetKey(keyid, key)) {
+
+                if (!pwallet->LoadKey(key))
+                {
+                    printf("Error reading wallet database: LoadKey failed");
+                    return false;
+                }
+            }
+
+        }
+        else if (strType == "version")
+        {
+            ssValue >> wss.nFileVersion;
+            if (wss.nFileVersion == 10300)
+                wss.nFileVersion = 300;
+        }
+    } catch (...)
+    {
+        return false;
+    }
+    return true;
+}
+
+
+
+
 static bool IsKeyType(string strType)
 {
     return (strType== "key" || strType == "wkey" ||
@@ -529,6 +663,90 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 
     return result;
 }
+
+DBErrors CWalletDB::LoadWalletImport(CWallet* pwallet)
+{
+    CWalletScanState wss;
+    bool fNoncriticalErrors = false;
+    DBErrors result = DB_LOAD_OK;
+
+    try {
+        printf("Loading Wallet for Import\n");
+        LOCK(pwallet->cs_wallet);
+        int nMinVersion = 0;
+        if (Read((string)"minversion", nMinVersion))
+        {
+            if (nMinVersion > CLIENT_VERSION)
+                return DB_TOO_NEW;
+            pwallet->LoadMinVersion(nMinVersion);
+        }
+
+        // Get cursor
+        Dbc* pcursor = GetCursor();
+        if (!pcursor)
+        {
+            printf("Error getting wallet database cursor\n");
+            return DB_CORRUPT;
+        }
+
+        while (true)
+        {
+            // Read next record
+            CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+            CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+            int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            if (ret == DB_NOTFOUND)
+                break;
+            else if (ret != 0)
+            {
+                printf("Error reading next record from wallet database\n");
+                return DB_CORRUPT;
+            }
+
+            // Try to be tolerant of single corrupt records:
+            string strType, strErr;
+            if (!ReadKeyValueImport(pwallet, ssKey, ssValue, wss, strType, strErr))
+            {
+                 printf("Reading Keys\n");
+                // losing keys is considered a catastrophic error, anything else
+                // we assume the user can live with:
+                if (IsKeyType(strType)) {
+                    printf("Corrupt keys");
+                    result = DB_CORRUPT;
+                } else
+                {
+                    // Leave other errors alone, if we try to fix them we might make things worse.
+                    fNoncriticalErrors = true; // ... but do warn the user there is something wrong.
+                }
+            }
+            if (!strErr.empty())
+                printf("%s\n", strErr.c_str());
+        }
+        pcursor->close();
+    }
+    catch (...)
+    {
+        printf("Corruption will robinson\n");
+        result = DB_CORRUPT;
+    }
+
+    if (fNoncriticalErrors && result == DB_LOAD_OK)
+        result = DB_NONCRITICAL_ERROR;
+
+    // Any wallet corruption at all: skip any rewriting or
+    // upgrading, we don't want to make it worse.
+    if (result != DB_LOAD_OK)
+        return result;
+
+    printf("nFileVersion = %d\n", wss.nFileVersion);
+
+    printf("Keys: %u plaintext, %u encrypted, %u total\n",
+           wss.nKeys, wss.nCKeys, wss.nKeys + wss.nCKeys);
+
+    return result;
+}
+
+
 
 void ThreadFlushWalletDB(void* parg)
 {

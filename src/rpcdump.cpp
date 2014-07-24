@@ -21,6 +21,7 @@ using namespace std;
 
 void EnsureWalletIsUnlocked();
 
+
 namespace bt = boost::posix_time;
 
 // Extended DecodeDumpTime implementation, see this page for details:
@@ -34,6 +35,7 @@ const std::locale formats[] = {
 };
 
 const size_t formats_n = sizeof(formats)/sizeof(formats[0]);
+CWallet* pwalletImport;
 
 std::time_t pt_to_time_t(const bt::ptime& pt)
 {
@@ -333,5 +335,92 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << "\n";
     file << "# End of dump\n";
     file.close();
+    return Value::null;
+}
+
+Value importwalletdat(const Array& params, bool fHelp)
+{
+    if (fHelp)
+        throw runtime_error(
+            "importwalletdat <file> \n"
+            "Import wallet.dat from BTC/LTC/DOGE \n"
+        );
+
+    CBlockIndex *pindexRescan = pindexGenesisBlock;
+    EnsureWalletIsUnlocked();
+
+    int64_t nStart;
+    bool fFirstRun = false;
+
+    printf("here before an error");
+    pwalletImport = new CWallet(params[0].get_str().c_str());
+    DBErrors nLoadWalletRet = pwalletImport->LoadWalletImport(fFirstRun);
+    printf("not here though");
+
+    std::ostringstream strErrors;
+    if (nLoadWalletRet != DB_LOAD_OK)
+        {
+            if (nLoadWalletRet == DB_CORRUPT)
+                strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
+            else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
+            {
+                string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
+                             " or address book entries might be missing or incorrect."));
+            }
+            else if (nLoadWalletRet == DB_TOO_NEW)
+                strErrors << _("Error loading wallet.dat: Wallet requires newer version of Clam") << "\n";
+            else if (nLoadWalletRet == DB_NEED_REWRITE)
+            {
+                strErrors << _("Wallet needed to be rewritten: restart Clam to complete") << "\n";
+                printf("%s", strErrors.str().c_str());
+            }
+            else
+                strErrors << _("Error loading wallet.dat") << "\n";
+    }
+
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+        LOCK(pwalletImport->cs_wallet);
+
+        //map<CBitcoinAddress,CKeyDump> mapDump;
+        std::set<CKeyID> setKeys;
+        pwalletImport->GetKeys(setKeys);
+
+        BOOST_FOREACH(const CKeyID &keyid, setKeys) {
+            int64_t nTime = GetTime();
+            bool IsCompressed;
+            std::string strAddr = CBitcoinAddress(keyid).ToString();
+            std::string strLabel = "importwallet";
+
+            CKey key;
+            if (pwalletImport->GetKey(keyid, key)) {
+
+                if (pwalletMain->HaveKey(keyid)) {
+                     printf("Skipping import of %s (key already present)\n", strAddr.c_str());
+                     continue;
+                }
+
+                CSecret secret = key.GetSecret(IsCompressed);
+                printf("Importing %s...\n", strAddr.c_str());
+                pwalletMain->AddKey(key);
+                pwalletMain->SetAddressBookName(keyid, strLabel);
+                pwalletMain->mapKeyMetadata[keyid].nCreateTime = nTime;
+                //mapDump[*it] = CKeyDump(key.GetSecret());
+            }
+        }
+    }
+    
+    UnregisterWallet(pwalletImport);
+    delete pwalletImport;
+
+    printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
+    nStart = GetTimeMillis();
+    pwalletMain->ScanForWalletTransactions(pindexRescan, true, true);
+    pwalletMain->ReacceptWalletTransactions();
+    pwalletMain->MarkDirty();
+
+    printf(" rescan      %15"PRId64"ms\n", GetTimeMillis() - nStart);
+    printf("import: done\n");
+
     return Value::null;
 }
