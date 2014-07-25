@@ -352,37 +352,44 @@ Value importwalletdat(const Array& params, bool fHelp)
     int64_t nStart;
     bool fFirstRun = false;
 
-    printf("here before an error");
     pwalletImport = new CWallet(params[0].get_str().c_str());
     DBErrors nLoadWalletRet = pwalletImport->LoadWalletImport(fFirstRun);
-    printf("not here though");
+
+    // Handle encrypted wallets. Wallest first need to be unlocked before the keys
+    // can be added into your clam wallet. 
+    if (pwalletImport->IsCrypted() && pwalletImport->IsLocked()) {
+        printf("Wallet it crypted");
+        SecureString strWalletPass;
+        strWalletPass.reserve(100);
+        strWalletPass = params[1].get_str().c_str();
+        if (strWalletPass.length() > 0)
+        {
+            if (!pwalletImport->Unlock(strWalletPass))
+                throw JSONRPCError(RPC_WALLET_PASSPHRASE_INCORRECT, "Error: The wallet passphrase entered was incorrect for the wallet your attempting to import.");
+        } else {
+            printf("no password");
+            throw JSONRPCError(RPC_WALLET_ERROR,
+                "importwalletdat <file> <passphrase> Your attempting to import a encrypted wallet. A password for the wallet your attemping to import is required.");
+        }
+    }
 
     std::ostringstream strErrors;
     if (nLoadWalletRet != DB_LOAD_OK)
         {
             if (nLoadWalletRet == DB_CORRUPT)
-                strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
-            else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
+                throw JSONRPCError(RPC_WALLET_ERROR, "Error loading wallet.dat: Wallet corrupted");
+            else if (nLoadWalletRet == DB_LOAD_FAIL)
             {
-                string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
-                             " or address book entries might be missing or incorrect."));
-            }
-            else if (nLoadWalletRet == DB_TOO_NEW)
-                strErrors << _("Error loading wallet.dat: Wallet requires newer version of Clam") << "\n";
-            else if (nLoadWalletRet == DB_NEED_REWRITE)
-            {
-                strErrors << _("Wallet needed to be rewritten: restart Clam to complete") << "\n";
-                printf("%s", strErrors.str().c_str());
+                throw JSONRPCError(RPC_WALLET_ERROR, "Walletfile failed to load");
             }
             else
-                strErrors << _("Error loading wallet.dat") << "\n";
+                printf("Non fatal errors loading wallet file\n");
     }
 
     {
         LOCK2(cs_main, pwalletMain->cs_wallet);
         LOCK(pwalletImport->cs_wallet);
 
-        //map<CBitcoinAddress,CKeyDump> mapDump;
         std::set<CKeyID> setKeys;
         pwalletImport->GetKeys(setKeys);
 
@@ -405,11 +412,11 @@ Value importwalletdat(const Array& params, bool fHelp)
                 pwalletMain->AddKey(key);
                 pwalletMain->SetAddressBookName(keyid, strLabel);
                 pwalletMain->mapKeyMetadata[keyid].nCreateTime = nTime;
-                //mapDump[*it] = CKeyDump(key.GetSecret());
             }
         }
     }
     
+    // Clean up unregistered wallet
     UnregisterWallet(pwalletImport);
     delete pwalletImport;
 
