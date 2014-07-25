@@ -43,8 +43,11 @@ CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // "standard" scrypt target limit
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfStakeLimitEasier(~uint256(0) >> 16);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
- 
-const int LOWER_DIFFICULTY_START = 42000;
+
+// hard-fork blocks 
+const int            LOTTERY_START = 34000;
+const int   LOWER_DIFFICULTY_START = 42000;
+const int TXID_IN_STAKE_HASH_START = 42000;
 
 unsigned int nTargetSpacing = 1 * 5; // 5 Seconds, this was only used to the inital PoW and distrubution
 unsigned int nTargetStakeSpacing = 1 * 60; // 60 seconds
@@ -993,7 +996,6 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 
     return nSubsidy + nFees;
 }
-const int LOTTERY_START = 34000;
  
 // miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(const CBlockIndex* pindex, int64_t nCoinAge, int64_t nFees )

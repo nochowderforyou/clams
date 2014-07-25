@@ -91,6 +91,8 @@ extern unsigned int nDerivationMethodIndex;
 
 extern bool fEnforceCanonical;
 
+extern const int TXID_IN_STAKE_HASH_START;
+
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64_t nMinDiskSpace = 52428800;
 

@@ -11,8 +11,6 @@ using namespace std;
 
 typedef std::map<int, unsigned int> MapModifierCheckpoints;
 
-const int TXID_IN_STAKE_HASH_START = 42000;
-
 // Hard checkpoints of stake modifiers to ensure they are deterministic
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     boost::assign::map_list_of
