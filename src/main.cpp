@@ -2286,7 +2286,7 @@ bool CBlock::AcceptBlock()
     if (IsProofOfStake())
     {
         uint256 targetProofOfStake;
-        if (!CheckProofOfStake(vtx[1], nBits, hashProof, targetProofOfStake))
+        if (!CheckProofOfStake(vtx[1], nBits, nHeight, hashProof, targetProofOfStake))
         {
             printf("WARNING: AcceptBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
             return false; // do not error here as we expect this during initial block download
