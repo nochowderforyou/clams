@@ -43,6 +43,8 @@ CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // "standard" scrypt target limit
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
  
+const int SMOOTH_DIFFICULTY_START = 999999;
+
 unsigned int nTargetSpacing = 1 * 5; // 5 Seconds, this was only used to the inital PoW and distrubution
 unsigned int nTargetStakeSpacing = 1 * 60; // 60 seconds
 unsigned int nStakeMinAge = 4 * 60 * 60; // 4 hours
@@ -1162,13 +1164,69 @@ static unsigned int GetNextTargetRequiredV2(const CBlockIndex* pindexLast, bool 
  
     return bnNew.GetCompact();
 }
+
+static unsigned int GetNextTargetRequiredV3(const CBlockIndex* pindexLast, bool fProofOfStake)
+{
+    CBigNum bnTargetLimit = fProofOfStake ? bnProofOfStakeLimit : bnProofOfWorkLimit;
  
+    const CBlockIndex* pindex;
+    const CBlockIndex* pindexPrevPrev = NULL;
+
+    if (pindexLast == NULL)
+        return bnTargetLimit.GetCompact(); // genesis block
+ 
+    const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
+
+    int64_t nInterval = nTargetTimespan / nTargetStakeSpacing;
+    int64_t count = 0;
+
+    for (pindex = pindexPrev; pindex && pindex->nHeight && count < nInterval; pindex = GetLastBlockIndex(pindex, fProofOfStake)) {
+		pindexPrevPrev = pindex;
+        pindex = pindex->pprev;
+        if (!pindex) break;
+        count++;
+        pindex = GetLastBlockIndex(pindex, fProofOfStake);
+    }
+
+	if (!pindex || !pindex->nHeight)
+		count--;
+
+    count--;
+
+    if (count < 1)
+        return bnTargetLimit.GetCompact(); // not enough blocks yet
+ 
+    int64_t nActualSpacing = (pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime()) / count;
+
+    if (0)
+        printf("nActualSpacing = ((block %d) %"PRId64" - (block %d) %"PRId64") / %"PRId64" = %"PRId64" / %"PRId64" = %"PRId64"\n",
+               pindexPrev    ->nHeight, pindexPrev    ->GetBlockTime(),
+               pindexPrevPrev->nHeight, pindexPrevPrev->GetBlockTime(),
+               count,
+               (pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime()), count,
+               nActualSpacing);
+
+    if (nActualSpacing < 0) nActualSpacing = nTargetStakeSpacing;
+
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexPrev->nBits);
+    bnNew *= ((nInterval - 1) * nTargetStakeSpacing + 2 * nActualSpacing);
+    bnNew /= ((nInterval + 1) * nTargetStakeSpacing);
+ 
+    if (bnNew <= 0 || bnNew > bnTargetLimit)
+        bnNew = bnTargetLimit;
+ 
+    return bnNew.GetCompact();
+}
+
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
     if (pindexLast->nHeight < 10000)
         return GetNextTargetRequiredV1(pindexLast, fProofOfStake);
-    else
+    else if (pindexLast->nHeight < SMOOTH_DIFFICULTY_START)
         return GetNextTargetRequiredV2(pindexLast, fProofOfStake);
+    else
+        return GetNextTargetRequiredV3(pindexLast, fProofOfStake);
 }
  
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
