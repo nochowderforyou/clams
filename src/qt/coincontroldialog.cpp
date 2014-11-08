@@ -110,6 +110,8 @@ CoinControlDialog::CoinControlDialog(QWidget *parent) :
     ui->treeWidget->setColumnWidth(COLUMN_ADDRESS, 290);
     ui->treeWidget->setColumnWidth(COLUMN_DATE, 110);
     ui->treeWidget->setColumnWidth(COLUMN_CONFIRMATIONS, 100);
+    ui->treeWidget->setColumnWidth(COLUMN_AGE, 60);
+    ui->treeWidget->setColumnWidth(COLUMN_WEIGHT, 60);
     ui->treeWidget->setColumnWidth(COLUMN_PRIORITY, 100);
     ui->treeWidget->setColumnHidden(COLUMN_TXHASH, true);         // store transacton hash in this column, but dont show it
     ui->treeWidget->setColumnHidden(COLUMN_VOUT_INDEX, true);     // store vout index in this column, but dont show it
@@ -622,6 +624,7 @@ void CoinControlDialog::updateView()
         double dPrioritySum = 0;
         int nChildren = 0;
         int nInputSum = 0;
+        int dWeight = 0;
         BOOST_FOREACH(const COutput& out, coins.second)
         {
             int nInputSize = 148; // 180 if uncompressed public key
@@ -683,7 +686,17 @@ void CoinControlDialog::updateView()
 
             // confirmations
             itemOutput->setText(COLUMN_CONFIRMATIONS, strPad(QString::number(out.nDepth), 8, " "));
-            
+
+            // age
+            float age = (GetTime() - out.tx->GetTxTime()) / (float)(1440 * nTargetStakeSpacing);
+            itemOutput->setText(COLUMN_AGE, strPad(QString::number(age, 'g', 3), 8, " "));
+
+            // weight
+            int weight = floorf((GetTime() - out.tx->GetTxTime() - nStakeMinAge) * out.tx->vout[out.i].nValue / BitcoinUnits::factor(BitcoinUnits::BTC) / (float)(1440 * nTargetStakeSpacing));
+            if (weight < 0) weight = 0;
+            itemOutput->setText(COLUMN_WEIGHT, strPad(QString::number(weight), 5, " "));
+            dWeight += weight;
+
             // priority
             double dPriority = ((double)out.tx->vout[out.i].nValue  / (nInputSize + 78)) * (out.nDepth+1); // 78 = 2 * 34 + 10
             itemOutput->setText(COLUMN_PRIORITY, CoinControlDialog::getPriorityLabel(dPriority));
@@ -721,6 +734,7 @@ void CoinControlDialog::updateView()
             itemWalletAddress->setText(COLUMN_AMOUNT_INT64, strPad(QString::number(nSum), 15, " "));
             itemWalletAddress->setText(COLUMN_PRIORITY, CoinControlDialog::getPriorityLabel(dPrioritySum));
             itemWalletAddress->setText(COLUMN_PRIORITY_INT64, strPad(QString::number((int64_t)dPrioritySum), 20, " "));
+            itemWalletAddress->setText(COLUMN_WEIGHT, strPad(QString::number((int64_t)dWeight), 5, " "));
         }
     }
     

@@ -494,6 +494,22 @@
      </column>
      <column>
       <property name="text">
+       <string>Age</string>
+      </property>
+      <property name="toolTip">
+       <string>Age in days</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Weight</string>
+      </property>
+      <property name="toolTip">
+       <string>Weight</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
        <string>Priority</string>
       </property>
      </column>
