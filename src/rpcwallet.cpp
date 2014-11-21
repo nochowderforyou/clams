@@ -367,6 +367,63 @@ Value signmessage(const Array& params, bool fHelp)
     return EncodeBase64(&vchSig[0], vchSig.size());
 }
 
+Value getstakedbyaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getstakedbyaddress <clamaddress>\n"
+            "Returns the total reward (including fees) earned from staking by <clamaddress>.");
+
+    // Bitcoin address
+    CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
+    CScript scriptPubKey;
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Clam address");
+
+    // scriptPubKey.SetDestination(address.Get());
+
+    CKeyID keyID;
+    if (!address.GetKeyID(keyID))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find keyID for Clam address");
+
+    CKey key;
+    if (!pwalletMain->GetKey(keyID, key))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find key for Clam address");
+
+    scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
+
+    if (!IsMine(*pwalletMain,scriptPubKey))
+        return (double)0.0;
+
+    // get account
+    string strAccount;
+    map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
+    if (mi != pwalletMain->mapAddressBook.end() && !(*mi).second.empty())
+        strAccount = (*mi).second;
+
+    // Tally
+    int64_t nAmount = 0;
+    for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
+    {
+        const CWalletTx& wtx = (*it).second;
+        if (!wtx.IsCoinStake() || !IsFinalTx(wtx) || wtx.GetDepthInMainChain() < 0)
+            continue;
+
+        BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+            if (txout.scriptPubKey == scriptPubKey) {
+                int64_t nFee;
+                list<pair<CTxDestination, int64_t> > listReceived;
+                list<pair<CTxDestination, int64_t> > listSent;
+
+                wtx.GetAmounts(listReceived, listSent, nFee, strAccount);
+                nAmount += -nFee;
+                break;
+            }
+    }
+
+    return  ValueFromAmount(nAmount);
+}
+ 
 Value getreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
