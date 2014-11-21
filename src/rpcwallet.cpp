@@ -369,10 +369,10 @@ Value signmessage(const Array& params, bool fHelp)
 
 Value getstakedbyaddress(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "getstakedbyaddress <clamaddress>\n"
-            "Returns the total reward (including fees) earned from staking by <clamaddress>.");
+            "getstakedbyaddress <clamaddress> [minconf=1]\n"
+            "Returns the total reward (including fees) earned from staking by <clamaddress> with at least [minconf] confirmations.");
 
     // Bitcoin address
     CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
@@ -393,6 +393,11 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
     if (!IsMine(*pwalletMain,scriptPubKey))
         return (double)0.0;
 
+    // Minimum confirmations
+    int nMinDepth = 1;
+    if (params.size() > 1)
+        nMinDepth = params[1].get_int();
+
     // get account
     string strAccount;
     map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
@@ -404,7 +409,7 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (!wtx.IsCoinStake() || !IsFinalTx(wtx) || wtx.GetDepthInMainChain() < 0)
+        if (!wtx.IsCoinStake() || !IsFinalTx(wtx) || wtx.GetDepthInMainChain() < nMinDepth)
             continue;
 
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
