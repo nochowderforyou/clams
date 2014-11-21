@@ -380,8 +380,6 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Clam address");
 
-    // scriptPubKey.SetDestination(address.Get());
-
     CKeyID keyID;
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find keyID for Clam address");
@@ -416,7 +414,7 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
                 list<pair<CTxDestination, int64_t> > listSent;
 
                 wtx.GetAmounts(listReceived, listSent, nFee, strAccount);
-                nAmount += -nFee;
+                nAmount -= nFee;
                 break;
             }
     }
