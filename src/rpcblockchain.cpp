@@ -122,6 +122,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("moneysupply", ValueFromAmount(blockindex->nMoneySupply)));
     result.push_back(Pair("digsupply", ValueFromAmount(blockindex->nDigsupply)));
     result.push_back(Pair("stakesupply", ValueFromAmount(blockindex->nStakeSupply)));
+    result.push_back(Pair("activesupply", ValueFromAmount(blockindex->nDigsupply + blockindex->nStakeSupply)));
     result.push_back(Pair("time", (int64_t)block.GetBlockTime()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
