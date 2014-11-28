@@ -147,12 +147,13 @@ Value getrawtransaction(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
 Value listunspent(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 3)
+    if (fHelp || params.size() > 4)
         throw runtime_error(
-            "listunspent [minconf=1] [maxconf=9999999]  [\"address\",...]\n"
+            "listunspent [minconf=1] [maxconf=9999999]  [\"address\",...] [mature=1]\n"
             "Returns array of unspent transaction outputs\n"
             "with between minconf and maxconf (inclusive) confirmations.\n"
             "Optionally filtered to only include txouts paid to specified addresses.\n"
+            "If mature is non-zero, only mature outputs will be listed.\n"
             "Results are an array of Objects, each of which has:\n"
             "{txid, vout, scriptPubKey, amount, confirmations}");
 
@@ -181,10 +182,14 @@ Value listunspent(const Array& params, bool fHelp)
         }
     }
 
+    bool fMature = true;
+    if (params.size() > 3)
+        fMature = (params[3].get_int() != 0);
+
     Array results;
     vector<COutput> vecOutputs;
     assert(pwalletMain != NULL);
-    pwalletMain->AvailableCoins(vecOutputs, false);
+    pwalletMain->AvailableCoins(vecOutputs, false, NULL, fMature);
     BOOST_FOREACH(const COutput& out, vecOutputs)
     {
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)

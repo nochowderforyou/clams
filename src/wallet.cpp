@@ -1092,7 +1092,7 @@ int64_t CWallet::GetImmatureBalance() const
 }
 
 // populate vCoins with vector of spendable COutputs
-void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
+void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, bool fOnlyMature) const
 {
     vCoins.clear();
 
@@ -1108,10 +1108,10 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
             if (fOnlyConfirmed && !pcoin->IsTrusted())
                 continue;
 
-            if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
+            if (pcoin->IsCoinBase() && fOnlyMature && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if(pcoin->IsCoinStake() && pcoin->GetBlocksToMaturity() > 0)
+            if(pcoin->IsCoinStake() && fOnlyMature && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
             int nDepth = pcoin->GetDepthInMainChain();
