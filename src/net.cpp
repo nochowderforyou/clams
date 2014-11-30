@@ -579,6 +579,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(nTimeConnected);
     X(addrName);
     X(nVersion);
+    X(nTimeOffset);
     X(strSubVer);
     X(fInbound);
     X(nStartingHeight);
