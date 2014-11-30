@@ -408,6 +408,11 @@ namespace json_spirit
     	    throw_error( begin, "not a string" );
         }
 
+        static void throw_trailing_junk( Iter_type begin, Iter_type end )
+        {
+    	    throw_error( begin, "trailing junk" );
+        }
+
         template< typename ScannerT >
         class definition
         {
@@ -444,7 +449,8 @@ namespace json_spirit
                 // actual grammer
 
                 json_
-                    = value_ | eps_p[ &throw_not_value ]
+                    = (value_ | eps_p[ &throw_not_value ])
+                    >> !( anychar_p >> eps_p[ &throw_trailing_junk ] )
                     ;
 
                 value_
