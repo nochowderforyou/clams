@@ -25,7 +25,10 @@ int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
+extern int64_t nMaxStakeValue;
+
 static unsigned int GetStakeSplitAge() { return 1 * 24 * 60 * 60; }
+
 static int64_t GetStakeCombineThreshold() { return 1 * COIN; }
 
 int64_t gcd(int64_t n,int64_t m) { return m == 0 ? n : gcd(m, n % m); }
@@ -1120,6 +1123,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue &&
+                    (!nMaxStakeValue || pcoin->vout[i].nValue <= nMaxStakeValue) &&
                 (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
                     vCoins.push_back(COutput(pcoin, i, nDepth));
 
