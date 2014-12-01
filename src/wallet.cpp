@@ -25,7 +25,10 @@ int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
+extern unsigned int nMaxStakeValue;
+
 static unsigned int GetStakeSplitAge() { return 1 * 24 * 60 * 60; }
+
 static int64_t GetStakeCombineThreshold() { return 1 * COIN; }
 
 int64_t gcd(int64_t n,int64_t m) { return m == 0 ? n : gcd(m, n % m); }
