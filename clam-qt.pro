@@ -38,6 +38,14 @@ contains(RELEASE, 1) {
     }
 }
 
+# use: qmake "PROFILE=1"
+contains(PROFILE, 1) {
+    QMAKE_CXXFLAGS_RELEASE += -pg -g
+    QMAKE_CXXFLAGS_RELEASE -= -O2
+    QMAKE_LFLAGS_RELEASE += -pg -g
+    QMAKE_LFLAGS_RELEASE -= -Wl,-O1
+}
+
 !win32 {
 # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
 QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
