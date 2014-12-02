@@ -251,7 +251,6 @@ Value getblock(const Array& params, bool fHelp)
     } else {
         pblockindex = NULL;
 
-        // std::map<uint256, CBlockIndex*> mapBlockIndex;
         BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex) {
             if (item.first.GetHex().substr(0, len) == strHash) {
                 pblockindex = item.second;
