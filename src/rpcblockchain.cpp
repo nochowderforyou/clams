@@ -234,13 +234,35 @@ Value getblock(const Array& params, bool fHelp)
             "Returns details of a block with given block-hash.");
 
     std::string strHash = params[0].get_str();
-    uint256 hash(strHash);
+    size_t len = strHash.length();
 
-    if (mapBlockIndex.count(hash) == 0)
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    if (len < 8)
+        throw runtime_error("Please provide at least the first 8 digits of the block hash");
+
+    CBlockIndex* pblockindex;
+
+    if (len == 64) {
+        uint256 hash(strHash);
+
+        if (mapBlockIndex.count(hash) == 0)
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+        pblockindex = mapBlockIndex[hash];
+    } else {
+        pblockindex = NULL;
+
+        BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex) {
+            if (item.first.GetHex().substr(0, len) == strHash) {
+                pblockindex = item.second;
+                break;
+            }
+        }
+
+        if (!pblockindex)
+            throw runtime_error("Block hash not found");
+    }
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
     block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
