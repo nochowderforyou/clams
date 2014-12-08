@@ -371,38 +371,40 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "getstakedbyaddress <clamaddress> [minconf=1]\n"
+            "getstakedbyaddress <clamaddress|*> [minconf=1]\n"
             "Returns the total reward (including fees) earned from staking by <clamaddress> with at least [minconf] confirmations.");
 
     // Bitcoin address
-    CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
+    bool fAllAddresses = (params[0].get_str() == "*");
+    CBitcoinAddress address;
     CScript scriptPubKey;
-    if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Clam address");
-
     CKeyID keyID;
-    if (!address.GetKeyID(keyID))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find keyID for Clam address");
-
     CKey key;
-    if (!pwalletMain->GetKey(keyID, key))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find key for Clam address");
 
-    scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
+    if (!fAllAddresses) {
+        address = CBitcoinAddress(params[0].get_str());
 
-    if (!IsMine(*pwalletMain,scriptPubKey))
-        return (double)0.0;
+        if (!address.IsValid())
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Clam address");
+
+        if (!address.GetKeyID(keyID))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find keyID for Clam address");
+
+        if (!pwalletMain->GetKey(keyID, key))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find key for Clam address");
+
+        scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
+
+        if (!IsMine(*pwalletMain,scriptPubKey))
+            return (double)0.0;
+    }
 
     // Minimum confirmations
     int nMinDepth = 1;
     if (params.size() > 1)
         nMinDepth = params[1].get_int();
 
-    // get account
     string strAccount;
-    map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
-    if (mi != pwalletMain->mapAddressBook.end() && !(*mi).second.empty())
-        strAccount = (*mi).second;
 
     // Tally
     int64_t nAmount = 0;
@@ -413,7 +415,7 @@ Value getstakedbyaddress(const Array& params, bool fHelp)
             continue;
 
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
-            if (txout.scriptPubKey == scriptPubKey) {
+            if (fAllAddresses || txout.scriptPubKey == scriptPubKey) {
                 int64_t nFee;
                 list<pair<CTxDestination, int64_t> > listReceived;
                 list<pair<CTxDestination, int64_t> > listSent;
