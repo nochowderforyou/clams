@@ -7,7 +7,7 @@
 # Originally by Laszlo Hanyecz (solar@heliacal.net)
 
 CXX=llvm-g++
-DEPSDIR=/usr/local
+DEPSDIR=/opt/local
 
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
@@ -16,7 +16,8 @@ INCLUDEPATHS= \
  -I"$(DEPSDIR)/include/db48"
 
 LIBPATHS= \
- -L"$(DEPSDIR)/lib"
+ -L"$(DEPSDIR)/lib" \
+ -L"$(DEPSDIR)/lib/db48"
 
 USE_UPNP:=1
 USE_WALLET:=1
@@ -26,7 +27,7 @@ LIBS= -dead_strip
 ifdef STATIC
 # Build STATIC if you are redistributing the clamd binary
 LIBS += \
- $(DEPSDIR)/lib/libdb_cxx-4.8.a \
+ $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
  $(DEPSDIR)/lib/libboost_filesystem-mt.a \
  $(DEPSDIR)/lib/libboost_program_options-mt.a \

@@ -24,4 +24,3 @@ qrc_*.cpp
 build
 
 !src/leveldb/Makefile
-clamd
