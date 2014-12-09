@@ -437,6 +437,12 @@ Value signrawtransaction(const Array& params, bool fHelp)
             if (!fGood)
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
             CKey key = vchSecret.GetKey();
+
+            // 5TY1TqhFLax7w7Hoa6YtrejzoAuWTf5Tf1RKSvVED9tadmUMYjX and Lg7s3TveHSrHbpmAZ5Vmt9an6nim2f4gekrLRR5bJeEfT2fXkRoT are the zero privkey
+            // they pass the above check, but aren't valid privkeys
+            if (!key.IsValid()) {
+                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
+            }
             tempKeystore.AddKey(key);
         }
     }
