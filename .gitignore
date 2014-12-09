@@ -1,7 +1,7 @@
 src/*.exe
-src/blackcoin
-src/blackcoind
-src/test_blackcoin
+src/clam
+src/clamd
+src/test_clam
 src/build.h
 .*.swp
 *.*~*
@@ -10,11 +10,11 @@ src/build.h
 *.orig
 *.o
 *.patch
-.blackcoin
+.clam
 #compilation and Qt preprocessor part
 *.qm
 Makefile
-blackcoin-qt
+clam-qt
 #resources cpp
 qrc_*.cpp
 #qt creator

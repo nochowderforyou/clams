@@ -7,23 +7,23 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleGetInfoString</key>
-	<string>BlackCoin-Qt</string>
+	<string>Clam-Qt</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleExecutable</key>
-	<string>BlackCoin-Qt</string>
+	<string>Clam-Qt</string>
 	<key>CFBundleIdentifier</key>
-	<string>co.blackcoin.BlackCoin-Qt</string>
+	<string>co.clam.Clam-Qt</string>
         <key>CFBundleURLTypes</key>
         <array>
           <dict>
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
             <key>CFBundleURLName</key>
-            <string>co.blackcoin.BlackCoinPayment</string>
+            <string>co.clam.ClamPayment</string>
             <key>CFBundleURLSchemes</key>
             <array>
-              <string>blackcoin</string>
+              <string>clam</string>
             </array>
           </dict>
         </array>
