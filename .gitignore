@@ -110,3 +110,6 @@ src/test/data/base58_keys_valid.json.h
 src/test/data/script_invalid.json.h
 src/test/data/script_valid.json.h
 test_bitcoin
+src/qt/clam-qt
+src/qt/moc_aboutdialog.cpp
+src/qt/moc_monitoreddatamapper.cpp

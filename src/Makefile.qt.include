@@ -90,6 +90,7 @@ QT_FORMS_UI = \
   qt/forms/transactiondescdialog.ui
 
 QT_MOC_CPP = \
+  qt/moc_aboutdialog.cpp \
   qt/moc_addressbookpage.cpp \
   qt/moc_addresstablemodel.cpp \
   qt/moc_askpassphrasedialog.cpp \
@@ -104,6 +105,7 @@ QT_MOC_CPP = \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
   qt/moc_macdockiconhandler.cpp \
+  qt/moc_monitoreddatamapper.cpp \
   qt/moc_notificator.cpp \
   qt/moc_optionsdialog.cpp \
   qt/moc_optionsmodel.cpp \
