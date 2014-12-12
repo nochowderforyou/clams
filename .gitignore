@@ -113,3 +113,5 @@ test_bitcoin
 src/qt/clam-qt
 src/qt/moc_aboutdialog.cpp
 src/qt/moc_monitoreddatamapper.cpp
+src/qt/test/moc_uritests.cpp
+src/qt/test/test_bitcoin-qt
