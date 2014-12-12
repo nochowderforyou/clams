@@ -1098,6 +1098,51 @@ Value listtransactions(const Array& params, bool fHelp)
     return ret;
 }
 
+Value listbalances(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 3)
+        throw runtime_error(
+            "listbalances [minconf=1] [maxconf=9999999] [mature=1]\n"
+            "Returns Object that has addresses as keys, address balances as values.");
+
+    int nMinDepth = 1;
+    if (params.size() > 0)
+        nMinDepth = params[0].get_int();
+
+    int nMaxDepth = 9999999;
+    if (params.size() > 1)
+        nMaxDepth = params[1].get_int();
+
+    bool fMature = true;
+    if (params.size() > 2)
+        fMature = (params[2].get_int() != 0);
+
+    map<string, int64_t> mapAddressBalances;
+    vector<COutput> vecOutputs;
+    pwalletMain->AvailableCoins(vecOutputs, false, NULL, fMature);
+
+    BOOST_FOREACH(const COutput& out, vecOutputs) {
+        if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)
+            continue;
+
+        int64_t nValue = out.tx->vout[out.i].nValue;
+        CTxDestination address;
+        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {
+            string sAddress(CBitcoinAddress(address).ToString());
+            if (mapAddressBalances.count(sAddress) == 0)
+                mapAddressBalances[sAddress] = nValue;
+            else
+                mapAddressBalances[sAddress] += nValue;
+        }
+    }
+
+    Object ret;
+    BOOST_FOREACH(const PAIRTYPE(string, int64_t)& addressBalance, mapAddressBalances)
+        ret.push_back(Pair(addressBalance.first, ValueFromAmount(addressBalance.second)));
+
+    return ret;
+}
+
 Value listaccounts(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
