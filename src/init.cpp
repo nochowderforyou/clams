@@ -686,10 +686,10 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (GetBoolArg("-reindex", false)) 
     {
 	   if (!LoadBlockIndex(true, true))
-            return InitError(_("Reindex: Error loading blkindex.dat"));
+            return InitError(_("Reindex: Error loading block index database"));
     } else { 		
     	if (!LoadBlockIndex())
-            return InitError(_("Error loading blkindex.dat"));
+            return InitError(_("Error loading block index database : try running with -reindex"));
     }
 
 

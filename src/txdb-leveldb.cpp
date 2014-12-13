@@ -368,7 +368,12 @@ bool CTxDB::LoadBlockIndex()
         if (strType != "blockindex")
             break;
         CDiskBlockIndex diskindex;
-        ssValue >> diskindex;
+        try {
+            ssValue >> diskindex;
+        }
+        catch (std::ios_base::failure &err) {
+            return error("LoadBlockIndex() : unable to unserialize record : try running with -reindex");
+        }
 
         uint256 blockHash = diskindex.GetBlockHash();
 
