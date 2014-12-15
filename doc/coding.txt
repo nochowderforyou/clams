@@ -27,7 +27,7 @@ Please don't put the first word of the variable name in lowercase like
 someVariable.
 
 Common types:
-n       integer number: short, unsigned short, int, unsigned int,
+n       integer number: short, unsigned short, int, uint,
             int64_t, uint64_t, sometimes char if used as a number
 d       double, float
 f       flag

@@ -31,8 +31,8 @@
 
 class uint256;
 
-static const int64_t COIN = 100000000;
-static const int64_t CENT = 1000000;
+const int64_t CENT = 1000000;
+const int64_t COIN = CENT * 100;
 
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
@@ -42,7 +42,7 @@ static const int64_t CENT = 1000000;
 
 #define UVOIDBEGIN(a)        ((void*)&(a))
 #define CVOIDBEGIN(a)        ((const void*)&(a))
-#define UINTBEGIN(a)        ((uint32_t*)&(a))
+#define UINTBEGIN(a)         ((uint32_t*)&(a))
 #define CUINTBEGIN(a)        ((const uint32_t*)&(a))
 
 /* Format characters for (s)size_t and ptrdiff_t */
@@ -443,9 +443,9 @@ template <typename T> class CMedianFilter
 private:
     std::vector<T> vValues;
     std::vector<T> vSorted;
-    unsigned int nSize;
+    uint nSize;
 public:
-    CMedianFilter(unsigned int size, T initial_value):
+    CMedianFilter(uint size, T initial_value):
         nSize(size)
     {
         vValues.reserve(size);

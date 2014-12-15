@@ -61,7 +61,7 @@ void SplitHostPort(std::string in, int &portOut, std::string &hostOut) {
         hostOut = in;
 }
 
-bool static LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions, bool fAllowLookup)
+bool static LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, uint nMaxSolutions, bool fAllowLookup)
 {
     vIP.clear();
 
@@ -113,7 +113,7 @@ bool static LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsign
     return (vIP.size() > 0);
 }
 
-bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions, bool fAllowLookup)
+bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, uint nMaxSolutions, bool fAllowLookup)
 {
     std::string str(pszName);
     std::string strHost = str;
@@ -127,7 +127,7 @@ bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nM
     return LookupIntern(strHost.c_str(), vIP, nMaxSolutions, fAllowLookup);
 }
 
-bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault, bool fAllowLookup, unsigned int nMaxSolutions)
+bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault, bool fAllowLookup, uint nMaxSolutions)
 {
     if (pszName[0] == 0)
         return false;
@@ -140,7 +140,7 @@ bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault, 
     if (!fRet)
         return false;
     vAddr.resize(vIP.size());
-    for (unsigned int i = 0; i < vIP.size(); i++)
+    for (uint i = 0; i < vIP.size(); i++)
         vAddr[i] = CService(vIP[i], port);
     return true;
 }
@@ -557,7 +557,7 @@ bool CNetAddr::SetSpecial(const std::string &strName)
         if (vchAddr.size() != 16-sizeof(pchOnionCat))
             return false;
         memcpy(ip, pchOnionCat, sizeof(pchOnionCat));
-        for (unsigned int i=0; i<16-sizeof(pchOnionCat); i++)
+        for (uint i=0; i<16-sizeof(pchOnionCat); i++)
             ip[i + sizeof(pchOnionCat)] = vchAddr[i];
         return true;
     }
@@ -566,7 +566,7 @@ bool CNetAddr::SetSpecial(const std::string &strName)
         if (vchAddr.size() != 16-sizeof(pchGarliCat))
             return false;
         memcpy(ip, pchOnionCat, sizeof(pchGarliCat));
-        for (unsigned int i=0; i<16-sizeof(pchGarliCat); i++)
+        for (uint i=0; i<16-sizeof(pchGarliCat); i++)
             ip[i + sizeof(pchGarliCat)] = vchAddr[i];
         return true;
     }
@@ -607,7 +607,7 @@ CNetAddr::CNetAddr(const std::string &strIp, bool fAllowLookup)
         *this = vIP[0];
 }
 
-unsigned int CNetAddr::GetByte(int n) const
+uint CNetAddr::GetByte(int n) const
 {
     return ip[15-n];
 }

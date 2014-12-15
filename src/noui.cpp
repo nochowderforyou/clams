@@ -8,7 +8,7 @@
 
 #include <string>
 
-static int noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
+static int noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, uint style)
 {
     std::string strCaption;
     // Check for usage of predefined caption

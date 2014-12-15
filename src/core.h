@@ -19,13 +19,13 @@ class COutPoint
 {
 public:
     uint256 hash;
-    unsigned int n;
+    uint n;
 
     COutPoint() { SetNull(); }
-    COutPoint(uint256 hashIn, unsigned int nIn) { hash = hashIn; n = nIn; }
+    COutPoint(uint256 hashIn, uint nIn) { hash = hashIn; n = nIn; }
     IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
-    void SetNull() { hash = 0; n = (unsigned int) -1; }
-    bool IsNull() const { return (hash == 0 && n == (unsigned int) -1); }
+    void SetNull() { hash = 0; n = (uint) -1; }
+    bool IsNull() const { return (hash == 0 && n == (uint) -1); }
 
     friend bool operator<(const COutPoint& a, const COutPoint& b)
     {
@@ -53,12 +53,12 @@ class CInPoint
 {
 public:
     CTransaction* ptx;
-    unsigned int n;
+    uint n;
 
     CInPoint() { SetNull(); }
-    CInPoint(CTransaction* ptxIn, unsigned int nIn) { ptx = ptxIn; n = nIn; }
-    void SetNull() { ptx = NULL; n = (unsigned int) -1; }
-    bool IsNull() const { return (ptx == NULL && n == (unsigned int) -1); }
+    CInPoint(CTransaction* ptxIn, uint nIn) { ptx = ptxIn; n = nIn; }
+    void SetNull() { ptx = NULL; n = (uint) -1; }
+    bool IsNull() const { return (ptx == NULL && n == (uint) -1); }
 };
 
 /** An input of a transaction.  It contains the location of the previous
@@ -70,21 +70,21 @@ class CTxIn
 public:
     COutPoint prevout;
     CScript scriptSig;
-    unsigned int nSequence;
+    uint nSequence;
 
     CTxIn()
     {
-        nSequence = std::numeric_limits<unsigned int>::max();
+        nSequence = std::numeric_limits<uint>::max();
     }
 
-    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max())
+    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), uint nSequenceIn=std::numeric_limits<uint>::max())
     {
         prevout = prevoutIn;
         scriptSig = scriptSigIn;
         nSequence = nSequenceIn;
     }
 
-    CTxIn(uint256 hashPrevTx, unsigned int nOut, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max())
+    CTxIn(uint256 hashPrevTx, uint nOut, CScript scriptSigIn=CScript(), uint nSequenceIn=std::numeric_limits<uint>::max())
     {
         prevout = COutPoint(hashPrevTx, nOut);
         scriptSig = scriptSigIn;
@@ -100,7 +100,7 @@ public:
 
     bool IsFinal() const
     {
-        return (nSequence == std::numeric_limits<unsigned int>::max());
+        return (nSequence == std::numeric_limits<uint>::max());
     }
 
     friend bool operator==(const CTxIn& a, const CTxIn& b)
@@ -124,7 +124,7 @@ public:
             str += strprintf(", coinbase %s", HexStr(scriptSig));
         else
             str += strprintf(", scriptSig=%s", scriptSig.ToString().substr(0,24));
-        if (nSequence != std::numeric_limits<unsigned int>::max())
+        if (nSequence != std::numeric_limits<uint>::max())
             str += strprintf(", nSequence=%u", nSequence);
         str += ")";
         return str;

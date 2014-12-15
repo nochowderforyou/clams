@@ -89,7 +89,7 @@ bool CWalletDB::WriteCryptedKey(const CPubKey& vchPubKey,
     return true;
 }
 
-bool CWalletDB::WriteMasterKey(unsigned int nID, const CMasterKey& kMasterKey)
+bool CWalletDB::WriteMasterKey(uint nID, const CMasterKey& kMasterKey)
 {
     nWalletDBUpdated++;
     return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
@@ -186,7 +186,7 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin
     Dbc* pcursor = GetCursor();
     if (!pcursor)
         throw runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
-    unsigned int fFlags = DB_SET_RANGE;
+    uint fFlags = DB_SET_RANGE;
     while (true)
     {
         // Read next record
@@ -302,9 +302,9 @@ CWalletDB::ReorderTransactions(CWallet* pwallet)
 
 class CWalletScanState {
 public:
-    unsigned int nKeys;
-    unsigned int nCKeys;
-    unsigned int nKeyMeta;
+    uint nKeys;
+    uint nCKeys;
+    uint nKeyMeta;
     bool fIsEncrypted;
     bool fAnyUnordered;
     int nFileVersion;
@@ -433,7 +433,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         }
         else if (strType == "mkey")
         {
-            unsigned int nID;
+            uint nID;
             ssKey >> nID;
             CMasterKey kMasterKey;
             ssValue >> kMasterKey;
@@ -608,7 +608,7 @@ ReadKeyValueImport(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         }
         else if (strType == "mkey")
         {
-            unsigned int nID;
+            uint nID;
             ssKey >> nID;
             CMasterKey kMasterKey;
             ssValue >> kMasterKey;
@@ -871,8 +871,8 @@ void ThreadFlushWalletDB(const string& strFile)
     if (!GetBoolArg("-flushwallet", true))
         return;
 
-    unsigned int nLastSeen = nWalletDBUpdated;
-    unsigned int nLastFlushed = nWalletDBUpdated;
+    uint nLastSeen = nWalletDBUpdated;
+    uint nLastFlushed = nWalletDBUpdated;
     int64_t nLastWalletUpdate = GetTime();
     while (true)
     {

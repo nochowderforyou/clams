@@ -43,9 +43,9 @@ CClientUIInterface uiInterface;
 std::string strWalletFileName;
 bool fConfChange;
 bool fMinimizeCoinAge;
-unsigned int nNodeLifespan;
-unsigned int nDerivationMethodIndex;
-unsigned int nMinerSleep;
+uint nNodeLifespan;
+uint nDerivationMethodIndex;
+uint nMinerSleep;
 bool fUseFastIndex;
 enum Checkpoints::CPMode CheckpointsMode;
 

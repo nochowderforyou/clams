@@ -40,7 +40,7 @@ void init_blockindex(leveldb::Options& options, bool fRemoveOld = false) {
 
     if (fRemoveOld) {
         filesystem::remove_all(directory); // remove directory
-        unsigned int nFile = 1;
+        uint nFile = 1;
 
         while (true)
         {
@@ -442,7 +442,7 @@ bool CTxDB::LoadBlockIndex()
         nCheckDepth = nBestHeight;
     LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CBlockIndex* pindexFork = NULL;
-    map<pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
+    map<pair<uint, uint>, CBlockIndex*> mapBlockPos;
     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
@@ -461,7 +461,7 @@ bool CTxDB::LoadBlockIndex()
         // check level 2: verify transaction index validity
         if (nCheckLevel>1)
         {
-            pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);
+            pair<uint, uint> pos = make_pair(pindex->nFile, pindex->nBlockPos);
             mapBlockPos[pos] = pindex;
             BOOST_FOREACH(const CTransaction &tx, block.vtx)
             {
@@ -487,14 +487,14 @@ bool CTxDB::LoadBlockIndex()
                             }
                     }
                     // check level 4: check whether spent txouts were spent within the main chain
-                    unsigned int nOutput = 0;
+                    uint nOutput = 0;
                     if (nCheckLevel>3)
                     {
                         BOOST_FOREACH(const CDiskTxPos &txpos, txindex.vSpent)
                         {
                             if (!txpos.IsNull())
                             {
-                                pair<unsigned int, unsigned int> posFind = make_pair(txpos.nFile, txpos.nBlockPos);
+                                pair<uint, uint> posFind = make_pair(txpos.nFile, txpos.nBlockPos);
                                 if (!mapBlockPos.count(posFind))
                                 {
                                     LogPrintf("LoadBlockIndex(): *** found bad spend at %d, hashBlock=%s, hashTx=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), hashTx.ToString());

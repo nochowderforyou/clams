@@ -46,7 +46,7 @@ void RPCTypeCheck(const Array& params,
                   const list<Value_type>& typesExpected,
                   bool fAllowNull)
 {
-    unsigned int i = 0;
+    uint i = 0;
     BOOST_FOREACH(Value_type t, typesExpected)
     {
         if (params.size() <= i)
@@ -300,7 +300,7 @@ static const CRPCCommand vRPCCommands[] =
 
 CRPCTable::CRPCTable()
 {
-    unsigned int vcidx;
+    uint vcidx;
     for (vcidx = 0; vcidx < (sizeof(vRPCCommands) / sizeof(vRPCCommands[0])); vcidx++)
     {
         const CRPCCommand *pcmd;
@@ -702,7 +702,7 @@ static Object JSONRPCExecOne(const Value& req)
 static string JSONRPCExecBatch(const Array& vReq)
 {
     Array ret;
-    for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++)
+    for (uint reqIdx = 0; reqIdx < vReq.size(); reqIdx++)
         ret.push_back(JSONRPCExecOne(vReq[reqIdx]));
 
     return write_string(Value(ret), false) + "\n";

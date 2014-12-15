@@ -103,7 +103,7 @@ CAddrInfo* CAddrMan::Create(const CAddress &addr, const CNetAddr &addrSource, in
     return &mapInfo[nId];
 }
 
-void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2)
+void CAddrMan::SwapRandom(uint nRndPos1, uint nRndPos2)
 {
     if (nRndPos1 == nRndPos2)
         return;
@@ -131,7 +131,7 @@ int CAddrMan::SelectTried(int nKBucket)
     // find the least recently tried among them
     int64_t nOldest = -1;
     int nOldestPos = -1;
-    for (unsigned int i = 0; i < ADDRMAN_TRIED_ENTRIES_INSPECT_ON_EVICT && i < vTried.size(); i++)
+    for (uint i = 0; i < ADDRMAN_TRIED_ENTRIES_INSPECT_ON_EVICT && i < vTried.size(); i++)
     {
         int nPos = GetRandInt(vTried.size() - i) + i;
         int nTemp = vTried[nPos];
@@ -149,7 +149,7 @@ int CAddrMan::SelectTried(int nKBucket)
 
 int CAddrMan::ShrinkNew(int nUBucket)
 {
-    assert(nUBucket >= 0 && (unsigned int)nUBucket < vvNew.size());
+    assert(nUBucket >= 0 && (uint)nUBucket < vvNew.size());
     std::set<int> &vNew = vvNew[nUBucket];
 
     // first look for deletable items
@@ -287,7 +287,7 @@ void CAddrMan::Good_(const CService &addr, int64_t nTime)
     // find a bucket it is in now
     int nRnd = GetRandInt(vvNew.size());
     int nUBucket = -1;
-    for (unsigned int n = 0; n < vvNew.size(); n++)
+    for (uint n = 0; n < vvNew.size(); n++)
     {
         int nB = (n+nRnd) % vvNew.size();
         std::set<int> &vNew = vvNew[nB];
@@ -490,12 +490,12 @@ int CAddrMan::Check_()
 
 void CAddrMan::GetAddr_(std::vector<CAddress> &vAddr)
 {
-    unsigned int nNodes = ADDRMAN_GETADDR_MAX_PCT * vRandom.size() / 100;
+    uint nNodes = ADDRMAN_GETADDR_MAX_PCT * vRandom.size() / 100;
     if (nNodes > ADDRMAN_GETADDR_MAX)
         nNodes = ADDRMAN_GETADDR_MAX;
 
     // gather a list of random nodes, skipping those of low quality
-    for (unsigned int n = 0; n < vRandom.size(); n++)
+    for (uint n = 0; n < vRandom.size(); n++)
     {
         if (vAddr.size() >= nNodes)
             break;

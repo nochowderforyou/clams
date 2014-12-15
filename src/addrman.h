@@ -205,7 +205,7 @@ protected:
     CAddrInfo* Create(const CAddress &addr, const CNetAddr &addrSource, int *pnId = NULL);
 
     // Swap two elements in vRandom.
-    void SwapRandom(unsigned int nRandomPos1, unsigned int nRandomPos2);
+    void SwapRandom(uint nRandomPos1, uint nRandomPos2);
 
     // Return position in given bucket to replace.
     int SelectTried(int nKBucket);
@@ -376,7 +376,7 @@ public:
         }
     }
 
-    unsigned int GetSerializeSize(int nType, int nVersion) const
+    uint GetSerializeSize(int nType, int nVersion) const
     {
         return (CSizeComputer(nType, nVersion) << *this).size();
     }

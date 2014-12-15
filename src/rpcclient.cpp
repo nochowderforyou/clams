@@ -167,10 +167,10 @@ public:
 
 CRPCConvertTable::CRPCConvertTable()
 {
-    const unsigned int n_elem =
+    const uint n_elem =
         (sizeof(vRPCConvertParams) / sizeof(vRPCConvertParams[0]));
 
-    for (unsigned int i = 0; i < n_elem; i++) {
+    for (uint i = 0; i < n_elem; i++) {
         members.insert(std::make_pair(vRPCConvertParams[i].methodName,
                                       vRPCConvertParams[i].paramIdx));
     }
@@ -183,7 +183,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 {
     Array params;
 
-    for (unsigned int idx = 0; idx < strParams.size(); idx++) {
+    for (uint idx = 0; idx < strParams.size(); idx++) {
         const std::string& strVal = strParams[idx];
 
         // insert string value directly

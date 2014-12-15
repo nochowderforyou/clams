@@ -55,7 +55,7 @@ inline std::string EncodeBase58(const unsigned char* pbegin, const unsigned char
         if (!BN_div(&dv, &rem, &bn, &bn58, pctx))
             throw bignum_error("EncodeBase58 : BN_div failed");
         bn = dv;
-        unsigned int c = rem.getulong();
+        uint c = rem.getulong();
         str += pszBase58[c];
     }
 
@@ -205,7 +205,7 @@ protected:
     }
 
 public:
-    bool SetString(const char* psz, unsigned int nVersionBytes = 1)
+    bool SetString(const char* psz, uint nVersionBytes = 1)
     {
         std::vector<unsigned char> vchTemp;
         DecodeBase58Check(psz, vchTemp);

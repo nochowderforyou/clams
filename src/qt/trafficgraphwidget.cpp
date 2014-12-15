@@ -58,7 +58,9 @@ void TrafficGraphWidget::paintPath(QPainterPath &path, QQueue<float> &samples)
 
 void TrafficGraphWidget::paintEvent(QPaintEvent *)
 {
+    const QString units = tr("KB/s");
     QPainter painter(this);
+    painter.setRenderHints(QPainter::HighQualityAntialiasing);
     painter.fillRect(rect(), Qt::black);
 
     if(fMax <= 0.0f) return;
@@ -72,7 +74,6 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
     int base = floor(log10(fMax));
     float val = pow(10.0f, base);
 
-    const QString units = tr("KB/s");
     // draw lines
     painter.setPen(axisCol);
     painter.drawText(XMARGIN, YMARGIN + h - h * val / fMax, QString("%1 %2").arg(val).arg(units));
@@ -150,7 +151,7 @@ void TrafficGraphWidget::setGraphRangeMins(int mins)
     timer->stop();
     timer->setInterval(msecsPerSample);
 
-    clear();
+    //clear();
 }
 
 void TrafficGraphWidget::clear()

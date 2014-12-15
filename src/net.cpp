@@ -612,7 +612,7 @@ void CNode::copyStats(CNodeStats &stats)
 #undef X
 
 // requires LOCK(cs_vRecvMsg)
-bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)
+bool CNode::ReceiveMsgBytes(const char *pch, uint nBytes)
 {
     while (nBytes > 0) {
 
@@ -643,11 +643,11 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)
     return true;
 }
 
-int CNetMessage::readHeader(const char *pch, unsigned int nBytes)
+int CNetMessage::readHeader(const char *pch, uint nBytes)
 {
     // copy data to temporary parsing buffer
-    unsigned int nRemaining = 24 - nHdrPos;
-    unsigned int nCopy = std::min(nRemaining, nBytes);
+    uint nRemaining = 24 - nHdrPos;
+    uint nCopy = std::min(nRemaining, nBytes);
 
     memcpy(&hdrbuf[nHdrPos], pch, nCopy);
     nHdrPos += nCopy;
@@ -674,10 +674,10 @@ int CNetMessage::readHeader(const char *pch, unsigned int nBytes)
     return nCopy;
 }
 
-int CNetMessage::readData(const char *pch, unsigned int nBytes)
+int CNetMessage::readData(const char *pch, uint nBytes)
 {
-    unsigned int nRemaining = hdr.nMessageSize - nDataPos;
-    unsigned int nCopy = std::min(nRemaining, nBytes);
+    uint nRemaining = hdr.nMessageSize - nDataPos;
+    uint nCopy = std::min(nRemaining, nBytes);
 
     if (vRecv.size() < nDataPos + nCopy) {
         // Allocate up to 256 KiB ahead, but never more than the total message size.
@@ -745,7 +745,7 @@ static list<CNode*> vNodesDisconnected;
 
 void ThreadSocketHandler()
 {
-    unsigned int nPrevNodeCount = 0;
+    uint nPrevNodeCount = 0;
 
     while (true)
     {
@@ -866,7 +866,7 @@ void ThreadSocketHandler()
             {
                 int nErr = WSAGetLastError();
                 LogPrintf("socket select error %d\n", nErr);
-                for (unsigned int i = 0; i <= hSocketMax; i++)
+                for (uint i = 0; i <= hSocketMax; i++)
                     FD_SET(i, &fdsetRecv);
             }
             FD_ZERO(&fdsetSend);
@@ -1355,7 +1355,7 @@ void ThreadOpenAddedConnections()
         }
     }
 
-    for (unsigned int i = 0; true; i++)
+    for (uint i = 0; true; i++)
     {
         list<string> lAddresses(0);
         {

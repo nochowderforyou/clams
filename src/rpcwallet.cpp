@@ -739,7 +739,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
                       "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CPubKey> pubkeys;
     pubkeys.resize(keys.size());
-    for (unsigned int i = 0; i < keys.size(); i++)
+    for (uint i = 0; i < keys.size(); i++)
     {
         const std::string& ks = keys[i].get_str();
 
@@ -1303,11 +1303,11 @@ Value keypoolrefill(const Array& params, bool fHelp)
             "Fills the keypool."
             + HelpRequiringPassphrase());
 
-    unsigned int nSize = max(GetArg("-keypool", 100), (int64_t)0);
+    uint nSize = max(GetArg("-keypool", 100), (int64_t)0);
     if (params.size() > 0) {
         if (params[0].get_int() < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected valid size");
-        nSize = (unsigned int) params[0].get_int();
+        nSize = (uint) params[0].get_int();
     }
 
     EnsureWalletIsUnlocked();

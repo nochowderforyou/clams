@@ -78,8 +78,8 @@ public:
 class CWallet : public CCryptoKeyStore, public CWalletInterface
 {
 private:
-    bool SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
-    bool SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=NULL) const;
+    bool SelectCoinsForStaking(int64_t nTargetValue, uint nSpendTime, std::set<std::pair<const CWalletTx*,uint> >& setCoinsRet, int64_t& nValueRet) const;
+    bool SelectCoins(int64_t nTargetValue, uint nSpendTime, std::set<std::pair<const CWalletTx*,uint> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=NULL) const;
 
     CWalletDB *pwalletdbEncryption;
 
@@ -104,9 +104,9 @@ public:
     std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
 
 
-    typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
+    typedef std::map<uint, CMasterKey> MasterKeyMap;
     MasterKeyMap mapMasterKeys;
-    unsigned int nMasterKeyMaxID;
+    uint nMasterKeyMaxID;
 
     CWallet()
     {
@@ -140,10 +140,10 @@ public:
     // check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { AssertLockHeld(cs_wallet); return nWalletMaxVersion >= wf; }
 
-    void AvailableCoinsForStaking(std::vector<COutput>& vCoins, unsigned int nSpendTime) const;
+    void AvailableCoinsForStaking(std::vector<COutput>& vCoins, uint nSpendTime) const;
     void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed=true, const CCoinControl *coinControl=NULL) const;
-    bool SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
-    bool SelectCoinsMinConfByCoinAge(int64_t nTargetValue, unsigned int nSpendTime, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
+    bool SelectCoinsMinConf(int64_t nTargetValue, uint nSpendTime, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*,uint> >& setCoinsRet, int64_t& nValueRet) const;
+    bool SelectCoinsMinConfByCoinAge(int64_t nTargetValue, uint nSpendTime, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*,uint> >& setCoinsRet, int64_t& nValueRet) const;
 
     // keystore implementation
     // Generate a new key
@@ -205,13 +205,13 @@ public:
 
     bool GetExpectedStakeTime(uint64_t& nExpected);
     bool GetStakeWeight(uint64_t& nWeight);
-    bool CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key);
+    bool CreateCoinStake(const CKeyStore& keystore, uint nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key);
 
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, std::string strCLAMSpeech = "", bool fAskFee=false);
     std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew, std::string strCLAMSpeech = "", bool fAskFee=false);
 
     bool NewKeyPool();
-    bool TopUpKeyPool(unsigned int nSize = 0);
+    bool TopUpKeyPool(uint nSize = 0);
     int64_t AddReserveKey(const CKeyPool& keypool);
     void ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool);
     void KeepKey(int64_t nIndex);
@@ -307,7 +307,7 @@ public:
         }
     }
 
-    unsigned int GetKeyPoolSize()
+    uint GetKeyPoolSize()
     {
         AssertLockHeld(cs_wallet); // setKeyPool
         return setKeyPool.size();
@@ -397,9 +397,9 @@ public:
     std::vector<CMerkleTx> vtxPrev;
     mapValue_t mapValue;
     std::vector<std::pair<std::string, std::string> > vOrderForm;
-    unsigned int fTimeReceivedIsTxTime;
-    unsigned int nTimeReceived;  // time received by this node
-    unsigned int nTimeSmart;
+    uint fTimeReceivedIsTxTime;
+    uint nTimeReceived;  // time received by this node
+    uint nTimeSmart;
     char fFromMe;
     std::string strFromAccount;
     std::vector<char> vfSpent; // which outputs are already spent
@@ -505,7 +505,7 @@ public:
 
             ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
 
-            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)atoi64(pthis->mapValue["timesmart"]) : 0;
+            pthis->nTimeSmart = mapValue.count("timesmart") ? (uint)atoi64(pthis->mapValue["timesmart"]) : 0;
         }
 
         pthis->mapValue.erase("fromaccount");
@@ -520,7 +520,7 @@ public:
     bool UpdateSpent(const std::vector<char>& vfNewSpent)
     {
         bool fReturn = false;
-        for (unsigned int i = 0; i < vfNewSpent.size(); i++)
+        for (uint i = 0; i < vfNewSpent.size(); i++)
         {
             if (i == vfSpent.size())
                 break;
@@ -550,7 +550,7 @@ public:
         MarkDirty();
     }
 
-    void MarkSpent(unsigned int nOut)
+    void MarkSpent(uint nOut)
     {
         if (nOut >= vout.size())
             throw std::runtime_error("CWalletTx::MarkSpent() : nOut out of range");
@@ -562,7 +562,7 @@ public:
         }
     }
 
-    void MarkUnspent(unsigned int nOut)
+    void MarkUnspent(uint nOut)
     {
         if (nOut >= vout.size())
             throw std::runtime_error("CWalletTx::MarkUnspent() : nOut out of range");
@@ -574,7 +574,7 @@ public:
         }
     }
 
-    bool IsSpent(unsigned int nOut) const
+    bool IsSpent(uint nOut) const
     {
         if (nOut >= vout.size())
             throw std::runtime_error("CWalletTx::IsSpent() : nOut out of range");
@@ -618,7 +618,7 @@ public:
             return nAvailableCreditCached;
 
         int64_t nCredit = 0;
-        for (unsigned int i = 0; i < vout.size(); i++)
+        for (uint i = 0; i < vout.size(); i++)
         {
             if (!IsSpent(i))
             {
@@ -674,7 +674,7 @@ public:
         std::vector<const CMerkleTx*> vWorkQueue;
         vWorkQueue.reserve(vtxPrev.size()+1);
         vWorkQueue.push_back(this);
-        for (unsigned int i = 0; i < vWorkQueue.size(); i++)
+        for (uint i = 0; i < vWorkQueue.size(); i++)
         {
             const CMerkleTx* ptx = vWorkQueue[i];
 

@@ -13,9 +13,9 @@
 #include "hash.h"
 
 // secp256k1:
-// const unsigned int PRIVATE_KEY_SIZE = 279;
-// const unsigned int PUBLIC_KEY_SIZE  = 65;
-// const unsigned int SIGNATURE_SIZE   = 72;
+// const uint PRIVATE_KEY_SIZE = 279;
+// const uint PUBLIC_KEY_SIZE  = 65;
+// const uint SIGNATURE_SIZE   = 72;
 //
 // see www.keylength.com
 // script supports up to 75 for single byte push
@@ -44,7 +44,7 @@ private:
     unsigned char vch[65];
 
     // Compute the length of a pubkey with a given first byte.
-    unsigned int static GetLen(unsigned char chHeader) {
+    uint static GetLen(unsigned char chHeader) {
         if (chHeader == 2 || chHeader == 3)
             return 33;
         if (chHeader == 4 || chHeader == 6 || chHeader == 7)
@@ -85,10 +85,10 @@ public:
     }
 
     // Simply read-only vector-like interface to the pubkey data.
-    unsigned int size() const { return GetLen(vch[0]); }
+    uint size() const { return GetLen(vch[0]); }
     const unsigned char *begin() const { return vch; }
     const unsigned char *end() const { return vch+size(); }
-    const unsigned char &operator[](unsigned int pos) const { return vch[pos]; }
+    const unsigned char &operator[](uint pos) const { return vch[pos]; }
 
     // Comparator implementation.
     friend bool operator==(const CPubKey &a, const CPubKey &b) {
@@ -104,16 +104,16 @@ public:
     }
 
     // Implement serialization, as if this was a byte vector.
-    unsigned int GetSerializeSize(int nType, int nVersion) const {
+    uint GetSerializeSize(int nType, int nVersion) const {
         return size() + 1;
     }
     template<typename Stream> void Serialize(Stream &s, int nType, int nVersion) const {
-        unsigned int len = size();
+        uint len = size();
         ::WriteCompactSize(s, len);
         s.write((char*)vch, len);
     }
     template<typename Stream> void Unserialize(Stream &s, int nType, int nVersion) {
-        unsigned int len = ::ReadCompactSize(s);
+        uint len = ::ReadCompactSize(s);
         if (len <= 65) {
             s.read((char*)vch, len);
         } else {
@@ -163,7 +163,7 @@ public:
     bool Decompress();
 
     /// Derive BIP32 child pubkey.
-    bool Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], unsigned int nChild, const unsigned char cc[32]) const;
+    bool Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], uint nChild, const unsigned char cc[32]) const;
 };
 
 
@@ -226,7 +226,7 @@ public:
     }
 
     // Simple read-only vector-like interface.
-    unsigned int size() const { return (fValid ? 32 : 0); }
+    uint size() const { return (fValid ? 32 : 0); }
     const unsigned char *begin() const { return vch; }
     const unsigned char *end() const { return vch + size(); }
 
@@ -261,7 +261,7 @@ public:
     bool SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const;
 
     // Derive BIP32 child key.
-    bool Derive(CKey& keyChild, unsigned char ccChild[32], unsigned int nChild, const unsigned char cc[32]) const;
+    bool Derive(CKey& keyChild, unsigned char ccChild[32], uint nChild, const unsigned char cc[32]) const;
 
     // Load private key and check that public key matches.
     bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck);
@@ -276,7 +276,7 @@ public:
 struct CExtPubKey {
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
-    unsigned int nChild;
+    uint nChild;
     unsigned char vchChainCode[32];
     CPubKey pubkey;
 
@@ -287,13 +287,13 @@ struct CExtPubKey {
 
     void Encode(unsigned char code[74]) const;
     void Decode(const unsigned char code[74]);
-    bool Derive(CExtPubKey &out, unsigned int nChild) const;
+    bool Derive(CExtPubKey &out, uint nChild) const;
 };
 
 struct CExtKey {
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
-    unsigned int nChild;
+    uint nChild;
     unsigned char vchChainCode[32];
     CKey key;
 
@@ -304,9 +304,9 @@ struct CExtKey {
 
     void Encode(unsigned char code[74]) const;
     void Decode(const unsigned char code[74]);
-    bool Derive(CExtKey &out, unsigned int nChild) const;
+    bool Derive(CExtKey &out, uint nChild) const;
     CExtPubKey Neuter() const;
-    void SetMaster(const unsigned char *seed, unsigned int nSeedLen);
+    void SetMaster(const unsigned char *seed, uint nSeedLen);
 };
 
 /** Check that required EC support is available at runtime */

@@ -441,11 +441,11 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
     int64_t nPayFee             = 0;
     int64_t nAfterFee           = 0;
     int64_t nChange             = 0;
-    unsigned int nBytes         = 0;
-    unsigned int nBytesInputs   = 0;
+    uint nBytes                 = 0;
+    uint nBytesInputs           = 0;
     double dPriority            = 0;
     double dPriorityInputs      = 0;
-    unsigned int nQuantity      = 0;
+    uint nQuantity              = 0;
     
     vector<COutPoint> vCoinControl;
     vector<COutput>   vOutputs;

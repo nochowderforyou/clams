@@ -144,7 +144,7 @@ public slots:
        @param[in] style     style definitions (icon and used buttons - buttons only for message boxes)
                             @see CClientUIInterface::MessageBoxFlags
     */
-    void message(const QString &title, const QString &message, bool modal, unsigned int style);
+    void message(const QString &title, const QString &message, bool modal, uint style);
     /** Asks the user whether to pay the transaction fee or to cancel the transaction.
        It is currently not possible to pass a return value to another thread through
        BlockingQueuedConnection, so an indirected pointer is used.

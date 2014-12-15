@@ -121,7 +121,7 @@ public:
     bool getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
     void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
     void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
-    bool isLockedCoin(uint256 hash, unsigned int n) const;
+    bool isLockedCoin(uint256 hash, uint n) const;
     void lockCoin(COutPoint& output);
     void unlockCoin(COutPoint& output);
     void listLockedCoins(std::vector<COutPoint>& vOutpts);
@@ -178,7 +178,7 @@ signals:
     void requireUnlock();
 
     // Asynchronous message notification
-    void message(const QString &title, const QString &message, bool modal, unsigned int style);
+    void message(const QString &title, const QString &message, bool modal, uint style);
 };
 
 
