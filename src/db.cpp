@@ -21,7 +21,7 @@ using namespace std;
 using namespace boost;
 
 
-uint nWalletDBUpdated;
+unsigned int nWalletDBUpdated;
 
 
 
@@ -75,7 +75,7 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
     filesystem::path pathErrorFile = pathDataDir / "db.log";
     LogPrintf("dbenv.open LogDir=%s ErrorFile=%s\n", pathLogDir.string(), pathErrorFile.string());
 
-    uint nEnvFlags = 0;
+    unsigned int nEnvFlags = 0;
     if (GetBoolArg("-privdb", true))
         nEnvFlags |= DB_PRIVATE;
 
@@ -239,7 +239,7 @@ CDB::CDB(const std::string& strFilename, const char* pszMode) :
         return;
 
     bool fCreate = strchr(pszMode, 'c');
-    uint nFlags = DB_THREAD;
+    unsigned int nFlags = DB_THREAD;
     if (fCreate)
         nFlags |= DB_CREATE;
 
@@ -303,7 +303,7 @@ void CDB::Close()
     pdb = NULL;
 
     // Flush database activity from memory pool to disk log
-    uint nMinutes = 0;
+    unsigned int nMinutes = 0;
     if (fReadOnly)
         nMinutes = 1;
 

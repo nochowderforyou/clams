@@ -32,12 +32,11 @@ static const int PING_INTERVAL = 2 * 60;
 /** Time after which to disconnect, after waiting for a ping response (or inactivity). */
 static const int TIMEOUT_INTERVAL = 20 * 60;
 
-inline uint ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
-inline uint SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
+inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
+inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
 
 void AddOneShot(std::string strDest);
 bool RecvLine(SOCKET hSocket, std::string& strLine);
-bool GetMyExternalIP(CNetAddr& ipRet);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
 CNode* FindNode(const std::string& addrName);
@@ -66,12 +65,13 @@ enum
     LOCAL_IF,     // address a local interface listens on
     LOCAL_BIND,   // address explicit bound to
     LOCAL_UPNP,   // address reported by UPnP
-    LOCAL_HTTP,   // address reported by whatismyip.com and similar
     LOCAL_MANUAL, // address explicitly specified (-externalip=)
 
     LOCAL_MAX
 };
 
+bool IsPeerAddrLocalGood(CNode *pnode);
+void AdvertizeLocal(CNode *pnode);
 void SetLimited(enum Network net, bool fLimited = true);
 bool IsLimited(enum Network net);
 bool IsLimited(const CNetAddr& addr);
@@ -94,7 +94,6 @@ enum
 extern bool fDiscover;
 extern uint64_t nLocalServices;
 extern uint64_t nLocalHostNonce;
-extern CAddress addrSeenByPeer;
 extern CAddrMan addrman;
 
 extern std::vector<CNode*> vNodes;
@@ -119,10 +118,14 @@ public:
     int64_t nTimeConnected;
     std::string addrName;
     int nVersion;
+    int nTimeOffset;
     std::string strSubVer;
     bool fInbound;
     int nStartingHeight;
     int nMisbehavior;
+    uint64_t nSendBytes;
+    uint64_t nRecvBytes;
+    bool fSyncNode;
     double dPingTime;
     double dPingWait;
     std::string addrLocal;
@@ -137,10 +140,10 @@ public:
 
     CDataStream hdrbuf;             // partially received header
     CMessageHeader hdr;             // complete header
-    uint nHdrPos;
+    unsigned int nHdrPos;
 
     CDataStream vRecv;              // received message data
-    uint nDataPos;
+    unsigned int nDataPos;
 
     int64_t nTime;                  // time (in microseconds) of message receipt.
 
@@ -165,8 +168,8 @@ public:
         vRecv.SetVersion(nVersionIn);
     }
 
-    int readHeader(const char *pch, uint nBytes);
-    int readData(const char *pch, uint nBytes);
+    int readHeader(const char *pch, unsigned int nBytes);
+    int readData(const char *pch, unsigned int nBytes);
 };
 
 
@@ -183,12 +186,14 @@ public:
     CDataStream ssSend;
     size_t nSendSize; // total size of all vSendMsg entries
     size_t nSendOffset; // offset inside the first vSendMsg already sent
+    uint64_t nSendBytes;
     std::deque<CSerializeData> vSendMsg;
     CCriticalSection cs_vSend;
 
     std::deque<CInv> vRecvGetData;
     std::deque<CNetMessage> vRecvMsg;
     CCriticalSection cs_vRecvMsg;
+    uint64_t nRecvBytes;
     int nRecvVersion;
 
     int64_t nLastSend;
@@ -198,6 +203,7 @@ public:
     std::string addrName;
     CService addrLocal;
     int nVersion;
+    int nTimeOffset;
     std::string strSubVer;
     bool fOneShot;
     bool fClient;
@@ -206,6 +212,7 @@ public:
     bool fSuccessfullyConnected;
     bool fDisconnect;
     CSemaphoreGrant grantOutbound;
+    CCriticalSection cs_filter;
     int nRefCount;
 protected:
 
@@ -220,6 +227,7 @@ public:
     CBlockIndex* pindexLastGetBlocksBegin;
     uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
+    bool fStartSync;
 
     // flood relay
     std::vector<CAddress> vAddrToSend;
@@ -251,10 +259,13 @@ public:
         nRecvVersion = INIT_PROTO_VERSION;
         nLastSend = 0;
         nLastRecv = 0;
+        nSendBytes = 0;
+        nRecvBytes = 0;
         nTimeConnected = GetTime();
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
+        nTimeOffset = 0;
         strSubVer = "";
         fOneShot = false;
         fClient = false; // set by version message
@@ -269,6 +280,7 @@ public:
         pindexLastGetBlocksBegin = 0;
         hashLastGetBlocksEnd = 0;
         nStartingHeight = -1;
+        fStartSync = false;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
@@ -312,16 +324,16 @@ public:
     }
 
     // requires LOCK(cs_vRecvMsg)
-    uint GetTotalRecvSize()
+    unsigned int GetTotalRecvSize()
     {
-        uint total = 0;
+        unsigned int total = 0;
         BOOST_FOREACH(const CNetMessage &msg, vRecvMsg) 
             total += msg.vRecv.size() + 24;
         return total;
     }
 
     // requires LOCK(cs_vRecvMsg)
-    bool ReceiveMsgBytes(const char *pch, uint nBytes);
+    bool ReceiveMsgBytes(const char *pch, unsigned int nBytes);
 
     // requires LOCK(cs_vRecvMsg)
     void SetRecvVersion(int nVersionIn)
@@ -430,12 +442,12 @@ public:
             return;
 
         // Set the size
-        uint nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;
+        unsigned int nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;
         memcpy((char*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], &nSize, sizeof(nSize));
 
         // Set the checksum
         uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());
-        uint nChecksum = 0;
+        unsigned int nChecksum = 0;
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
         assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
         memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
@@ -614,9 +626,9 @@ public:
         }
     }
 
-    bool IsSubscribed(uint nChannel);
-    void Subscribe(uint nChannel, uint nHops=0);
-    void CancelSubscribe(uint nChannel);
+    bool IsSubscribed(unsigned int nChannel);
+    void Subscribe(unsigned int nChannel, unsigned int nHops=0);
+    void CancelSubscribe(unsigned int nChannel);
     void CloseSocketDisconnect();
 
     // Denial-of-service detection/prevention

@@ -66,7 +66,7 @@ public:
         {
             foreground = option.palette.color(QPalette::Text);
         }
-        painter->setPen(fUseClamTheme ? QColor(255, 255, 255) : foreground);
+        painter->setPen(foreground);
         QString amountText = BitcoinUnits::formatWithUnit(unit, amount, true);
         if(!confirmed)
         {
@@ -74,7 +74,7 @@ public:
         }
         painter->drawText(amountRect, Qt::AlignRight|Qt::AlignVCenter, amountText);
 
-        painter->setPen(fUseClamTheme ? QColor(96, 101, 110) : option.palette.color(QPalette::Text));
+        painter->setPen(foreground);
         painter->drawText(amountRect, Qt::AlignLeft|Qt::AlignVCenter, GUIUtil::dateTimeStr(date));
 
         painter->restore();
@@ -112,22 +112,16 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 
-    // init "out of sync" warning labels
-    ui->labelWalletStatus->setText("(" + tr("out of sync") + ")");
-    ui->labelTransactionsStatus->setText("(" + tr("out of sync") + ")");
-
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
 
-    if (fUseClamTheme)
-    {
-        const char* whiteLabelQSS = "QLabel { color: rgb(255,255,255); }";
-        ui->labelBalance->setStyleSheet(whiteLabelQSS);
-        ui->labelStake->setStyleSheet(whiteLabelQSS);
-        ui->labelUnconfirmed->setStyleSheet(whiteLabelQSS);
-        ui->labelImmature->setStyleSheet(whiteLabelQSS);
-        ui->labelTotal->setStyleSheet(whiteLabelQSS);
-    }
+    // TODO: fix these styles and make them use rich text switching like pandacoin
+//        const char* whiteLabelQSS = "QLabel { color: rgb(255,255,255); }";
+//        ui->labelBalance->setStyleSheet(whiteLabelQSS);
+//        ui->labelStake->setStyleSheet(whiteLabelQSS);
+//        ui->labelUnconfirmed->setStyleSheet(whiteLabelQSS);
+//        ui->labelImmature->setStyleSheet(whiteLabelQSS);
+//        ui->labelTotal->setStyleSheet(whiteLabelQSS);
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
@@ -222,6 +216,6 @@ void OverviewPage::updateAlerts(const QString &warnings)
 
 void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
-    ui->labelWalletStatus->setVisible(fShow);
+    ui->labelTransactionsStatus->setText("(" + tr("out of sync") + ")");
     ui->labelTransactionsStatus->setVisible(fShow);
 }

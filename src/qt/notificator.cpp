@@ -117,10 +117,10 @@ FreedesktopImage::FreedesktopImage(const QImage &img):
     QImage tmp = img.convertToFormat(QImage::Format_ARGB32);
     const uint32_t *data = reinterpret_cast<const uint32_t*>(tmp.bits());
 
-    uint num_pixels = width * height;
+    unsigned int num_pixels = width * height;
     image.resize(num_pixels * BYTES_PER_PIXEL);
 
-    for(uint ptr = 0; ptr < num_pixels; ++ptr)
+    for(unsigned int ptr = 0; ptr < num_pixels; ++ptr)
     {
         image[ptr*BYTES_PER_PIXEL+0] = data[ptr] >> 16; // R
         image[ptr*BYTES_PER_PIXEL+1] = data[ptr] >> 8;  // G

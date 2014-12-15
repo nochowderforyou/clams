@@ -9,8 +9,8 @@
 #include "serialize.h"
 #include "keystore.h"
 
-const uint WALLET_CRYPTO_KEY_SIZE = 32;
-const uint WALLET_CRYPTO_SALT_SIZE = 8;
+const unsigned int WALLET_CRYPTO_KEY_SIZE = 32;
+const unsigned int WALLET_CRYPTO_SALT_SIZE = 8;
 
 /*
 Private key encryption is done based on a CMasterKey,
@@ -35,8 +35,8 @@ public:
     std::vector<unsigned char> vchSalt;
     // 0 = EVP_sha512()
     // 1 = scrypt()
-    uint nDerivationMethod;
-    uint nDeriveIterations;
+    unsigned int nDerivationMethod;
+    unsigned int nDeriveIterations;
     // Use this for more parameters to key derivation,
     // such as the various parameters to scrypt
     std::vector<unsigned char> vchOtherDerivationParameters;
@@ -58,7 +58,7 @@ public:
         vchOtherDerivationParameters = std::vector<unsigned char>(0);
     }
 
-    CMasterKey(uint nDerivationMethodIndex)
+    CMasterKey(unsigned int nDerivationMethodIndex)
     {
         switch (nDerivationMethodIndex)
         {
@@ -90,7 +90,7 @@ private:
     bool fKeySet;
 
 public:
-    bool SetKeyFromPassphrase(const SecureString &strKeyData, const std::vector<unsigned char>& chSalt, const uint nRounds, const uint nDerivationMethod);
+    bool SetKeyFromPassphrase(const SecureString &strKeyData, const std::vector<unsigned char>& chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod);
     bool Encrypt(const CKeyingMaterial& vchPlaintext, std::vector<unsigned char> &vchCiphertext);
     bool Decrypt(const std::vector<unsigned char>& vchCiphertext, CKeyingMaterial& vchPlaintext);
     bool SetKey(const CKeyingMaterial& chNewKey, const std::vector<unsigned char>& chNewIV);

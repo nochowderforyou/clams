@@ -5,6 +5,12 @@
 #include <QObject>
 #include <QMessageBox>
 
+// UI extern settings defined in optionsmodel.cpp
+extern bool fUseClamTheme;
+extern bool fUseClamSpeech;
+extern bool fUseClamSpeechRandom;
+extern int  nClamSpeechIndex;
+
 class SendCoinsRecipient;
 
 QT_BEGIN_NAMESPACE
@@ -115,8 +121,6 @@ namespace GUIUtil
         QString coreOptions;
         QString uiOptions;
     };
-
-    void SetClamThemeQSS(QApplication& app);
 
 } // namespace GUIUtil
 

@@ -81,11 +81,12 @@ double GetPoSKernelPS()
     CBlockIndex* pindex = pindexBest;
     CBlockIndex* pindexPrevStake = NULL;
 
-    while (pindex && nStakesHandled < nPoSInterval)
+    while (pindex && nStakesHandled <= nPoSInterval)
     {
         if (pindex->IsProofOfStake())
         {
-            dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
+            if (nStakesHandled < nPoSInterval)
+                dStakeKernelsTriedAvg += GetDifficulty(pindex) * 0x100000000;
             nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
             pindexPrevStake = pindex;
             nStakesHandled++;
@@ -119,6 +120,10 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("version", block.nVersion));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     result.push_back(Pair("mint", ValueFromAmount(blockindex->nMint)));
+    result.push_back(Pair("moneysupply", ValueFromAmount(blockindex->nMoneySupply)));
+    result.push_back(Pair("digsupply", ValueFromAmount(blockindex->nDigsupply)));
+    result.push_back(Pair("stakesupply", ValueFromAmount(blockindex->nStakeSupply)));
+    result.push_back(Pair("activesupply", ValueFromAmount(blockindex->nDigsupply + blockindex->nStakeSupply)));
     result.push_back(Pair("time", (int64_t)block.GetBlockTime()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
@@ -166,6 +171,45 @@ Value getbestblockhash(const Array& params, bool fHelp)
             "Returns the hash of the best block in the longest block chain.");
 
     return hashBestChain.GetHex();
+}
+
+Value dumpbootstrap(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "dumpbootstrap \"destination\" \"blocks\"\n"
+            "\nCreates a bootstrap format block dump of the blockchain in destination, which can be a directory or a path with filename, up to the given block number.");
+
+    string strDest = params[0].get_str();
+    int nBlocks = params[1].get_int();
+    if (nBlocks < 0 || nBlocks > nBestHeight)
+        throw runtime_error("Block number out of range.");
+
+    boost::filesystem::path pathDest(strDest);
+    if (boost::filesystem::is_directory(pathDest))
+        pathDest /= "bootstrap.dat";
+
+    try {
+        FILE* file = fopen(pathDest.string().c_str(), "wb");
+        if (!file)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);
+        if (!fileout)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        for (int nHeight = 0; nHeight <= nBlocks; nHeight++)
+        {
+            CBlock block;
+            CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
+            block.ReadFromDisk(pblockindex, true);
+            fileout << FLATDATA(Params().MessageStart()) << fileout.GetSerializeSize(block) << block;
+        }
+    } catch(const boost::filesystem::filesystem_error &e) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Error: Bootstrap dump failed!");
+    }
+
+    return Value::null;
 }
 
 Value getblockcount(const Array& params, bool fHelp)
@@ -234,13 +278,36 @@ Value getblock(const Array& params, bool fHelp)
             "Returns details of a block with given block-hash.");
 
     std::string strHash = params[0].get_str();
-    uint256 hash(strHash);
+    size_t len = strHash.length();
 
-    if (mapBlockIndex.count(hash) == 0)
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    if (len < 8)
+        throw runtime_error("Please provide at least the first 8 digits of the block hash");
+
+    CBlockIndex* pblockindex;
+
+    if (len == 64) {
+        uint256 hash(strHash);
+
+        if (mapBlockIndex.count(hash) == 0)
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+        pblockindex = mapBlockIndex[hash];
+    } else {
+        pblockindex = NULL;
+
+        // std::map<uint256, CBlockIndex*> mapBlockIndex;
+        BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex) {
+            if (item.first.GetHex().substr(0, len) == strHash) {
+                pblockindex = item.second;
+                break;
+            }
+        }
+
+        if (!pblockindex)
+            throw runtime_error("Block hash not found");
+    }
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
     block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);

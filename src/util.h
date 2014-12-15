@@ -193,6 +193,11 @@ boost::filesystem::path GetDefaultDataDir();
 const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
 boost::filesystem::path GetConfigFile();
 boost::filesystem::path GetPidFile();
+bool LoadClamSpeech();
+bool SaveClamSpeech();
+std::string GetRandomClamSpeech();
+boost::filesystem::path GetClamSpeechFile();
+boost::filesystem::path GetQuoteFile();
 #ifndef WIN32
 void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
 #endif
@@ -443,9 +448,9 @@ template <typename T> class CMedianFilter
 private:
     std::vector<T> vValues;
     std::vector<T> vSorted;
-    uint nSize;
+    unsigned int nSize;
 public:
-    CMedianFilter(uint size, T initial_value):
+    CMedianFilter(unsigned int size, T initial_value):
         nSize(size)
     {
         vValues.reserve(size);
@@ -532,7 +537,7 @@ inline uint32_t ByteReverse(uint32_t value)
 //    threadGroup.create_thread(boost::bind(&LoopForever<boost::function<void()> >, "nothing", f, milliseconds));
 template <typename Callable> void LoopForever(const char* name,  Callable func, int64_t msecs)
 {
-    std::string s = strprintf("blackcoin-%s", name);
+    std::string s = strprintf("Clam-%s", name);
     RenameThread(s.c_str());
     LogPrintf("%s thread start\n", name);
     try
@@ -558,7 +563,7 @@ template <typename Callable> void LoopForever(const char* name,  Callable func, 
 // .. and a wrapper that just calls func once
 template <typename Callable> void TraceThread(const char* name,  Callable func)
 {
-    std::string s = strprintf("blackcoin-%s", name);
+    std::string s = strprintf("Clam-%s", name);
     RenameThread(s.c_str());
     try
     {

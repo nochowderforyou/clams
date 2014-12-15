@@ -40,7 +40,7 @@ void init_blockindex(leveldb::Options& options, bool fRemoveOld = false) {
 
     if (fRemoveOld) {
         filesystem::remove_all(directory); // remove directory
-        uint nFile = 1;
+        unsigned int nFile = 1;
 
         while (true)
         {
@@ -78,6 +78,7 @@ CTxDB::CTxDB(const char* pszMode)
     }
 
     bool fCreate = strchr(pszMode, 'c');
+    bool fReindex = strchr(pszMode, 'i');
 
     options = GetOptions();
     options.create_if_missing = fCreate;
@@ -85,6 +86,25 @@ CTxDB::CTxDB(const char* pszMode)
 
     init_blockindex(options); // Init directory
     pdb = txdb;
+
+    if(fReindex)
+    {
+	LogPrintf("Reindex: removing previous txleveldb directory");
+            
+	// Leveldb instance destruction
+        delete txdb;
+        txdb = pdb = NULL;
+        delete activeBatch;
+        activeBatch = NULL;
+            
+	init_blockindex(options, true); // Remove directory and create new database
+    	pdb = txdb;
+
+        bool fTmp = fReadOnly;
+        fReadOnly = false;
+        WriteVersion(DATABASE_VERSION); // Save transaction index version
+        fReadOnly = fTmp;
+    }
 
     if (Exists(string("version")))
     {
@@ -348,7 +368,12 @@ bool CTxDB::LoadBlockIndex()
         if (strType != "blockindex")
             break;
         CDiskBlockIndex diskindex;
-        ssValue >> diskindex;
+        try {
+            ssValue >> diskindex;
+        }
+        catch (std::ios_base::failure &err) {
+            return error("LoadBlockIndex() : unable to unserialize record : try running with -reindex");
+        }
 
         uint256 blockHash = diskindex.GetBlockHash();
 
@@ -361,6 +386,8 @@ bool CTxDB::LoadBlockIndex()
         pindexNew->nHeight        = diskindex.nHeight;
         pindexNew->nMint          = diskindex.nMint;
         pindexNew->nMoneySupply   = diskindex.nMoneySupply;
+        pindexNew->nDigsupply     = diskindex.nDigsupply;
+        pindexNew->nStakeSupply   = diskindex.nStakeSupply;
         pindexNew->nFlags         = diskindex.nFlags;
         pindexNew->nStakeModifier = diskindex.nStakeModifier;
         pindexNew->prevoutStake   = diskindex.prevoutStake;
@@ -442,7 +469,7 @@ bool CTxDB::LoadBlockIndex()
         nCheckDepth = nBestHeight;
     LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CBlockIndex* pindexFork = NULL;
-    map<pair<uint, uint>, CBlockIndex*> mapBlockPos;
+    map<pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
@@ -461,7 +488,7 @@ bool CTxDB::LoadBlockIndex()
         // check level 2: verify transaction index validity
         if (nCheckLevel>1)
         {
-            pair<uint, uint> pos = make_pair(pindex->nFile, pindex->nBlockPos);
+            pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);
             mapBlockPos[pos] = pindex;
             BOOST_FOREACH(const CTransaction &tx, block.vtx)
             {
@@ -487,14 +514,14 @@ bool CTxDB::LoadBlockIndex()
                             }
                     }
                     // check level 4: check whether spent txouts were spent within the main chain
-                    uint nOutput = 0;
+                    unsigned int nOutput = 0;
                     if (nCheckLevel>3)
                     {
                         BOOST_FOREACH(const CDiskTxPos &txpos, txindex.vSpent)
                         {
                             if (!txpos.IsNull())
                             {
-                                pair<uint, uint> posFind = make_pair(txpos.nFile, txpos.nBlockPos);
+                                pair<unsigned int, unsigned int> posFind = make_pair(txpos.nFile, txpos.nBlockPos);
                                 if (!mapBlockPos.count(posFind))
                                 {
                                     LogPrintf("LoadBlockIndex(): *** found bad spend at %d, hashBlock=%s, hashTx=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), hashTx.ToString());

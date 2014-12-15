@@ -16,10 +16,16 @@
 #include "coincontrol.h"
 #include "coincontroldialog.h"
 
+#include "clamspeech.h"
+
+#include <QDebug>
+#include <QString>
 #include <QMessageBox>
 #include <QTextDocument>
 #include <QScrollBar>
 #include <QClipboard>
+#include <QDateTime>
+#include <QSettings>
 
 SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     QDialog(parent),
@@ -34,11 +40,8 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     ui->sendButton->setIcon(QIcon());
 #endif
 
-#if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     ui->lineEditCoinControlChange->setPlaceholderText(tr("Enter a Clam address (e.g. xqgY4r2RoEdqYk3QsAqFckyf9pRHN6i)"));
-    ui->editCLAMSpeech->setPlaceholderText(tr("CLAMSpeech: (Note: this information is public)"));
-#endif
 
     addEntry();
 
@@ -124,7 +127,7 @@ void SendCoinsDialog::on_sendButton_clicked()
     if(!model)
         return;
 
-    QString clamspeech = ui->editCLAMSpeech->text();
+    QString clamspeech = ui->clamQuotes->currentText();
 
     for(int i = 0; i < ui->entries->count(); ++i)
     {
@@ -231,9 +234,28 @@ void SendCoinsDialog::on_sendButton_clicked()
     fNewRecipientAllowed = true;
 }
 
+void SendCoinsDialog::clamSpeechIndexChanged(const int &index)
+{
+    if ( index >= clamSpeechQuoteCount )
+    {
+        qDebug() << "New CLAMSpeech quote added at" << index;
+
+        // Add quote
+        quoteList.push_back( ui->clamQuotes->itemText(index).toStdString() );
+    }
+
+    clamSpeechQuoteCount = ui->clamQuotes->count();
+    nClamSpeechIndex = index;
+
+    qDebug() << "saving nClamSpeechIndex =" << index;
+    // Save to QSettings
+    QSettings settings;
+    settings.setValue( "nClamSpeechIndex", nClamSpeechIndex );
+}
+
 void SendCoinsDialog::clear()
 {
-    ui->editCLAMSpeech->clear();
+    ui->clamQuotes->clear();
     // Remove 
     //entries until only one left
     while(ui->entries->count())
@@ -270,7 +292,7 @@ SendCoinsEntry *SendCoinsDialog::addEntry()
     // Focus the field, so that entry can start immediately
     entry->clear();
     entry->setFocus();
-    ui->scrollAreaWidgetContents->resize(ui->scrollAreaWidgetContents->sizeHint());
+    //ui->scrollAreaWidgetContents->resize(ui->scrollAreaWidgetContents->sizeHint());
     QCoreApplication::instance()->processEvents();
     QScrollBar* bar = ui->scrollArea->verticalScrollBar();
     if(bar)
@@ -302,8 +324,8 @@ void SendCoinsDialog::removeEntry(SendCoinsEntry* entry)
 
 QWidget *SendCoinsDialog::setupTabChain(QWidget *prev)
 {
-    QWidget::setTabOrder(prev, ui->editCLAMSpeech);
-    prev = ui->editCLAMSpeech;
+    QWidget::setTabOrder(prev, ui->clamQuotes);
+    prev = ui->clamQuotes;
 
     for(int i = 0; i < ui->entries->count(); ++i)
     {
@@ -367,6 +389,58 @@ void SendCoinsDialog::setBalance(qint64 balance, qint64 stake, qint64 unconfirme
     {
         ui->labelBalance->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), balance));
     }
+}
+
+void SendCoinsDialog::loadClamSpeech()
+{
+    if ( !fUseClamSpeech )
+        return;
+
+    // disconnect widget change signal to stop clashing
+    disconnect( ui->clamQuotes, SIGNAL(currentIndexChanged(int)), this, SLOT(clamSpeechIndexChanged(int)) );
+
+    // Load quotes from clamspeech.h
+    ui->clamQuotes->clear();
+    for ( ulong i = 0; i < clamSpeech.size(); i++ )
+        ui->clamQuotes->addItem( QString::fromStdString( clamSpeech.at(i) ) );
+
+    // Hold the index count to detect appending new quotes
+    clamSpeechQuoteCount = ui->clamQuotes->count();
+
+    if ( !clamSpeechQuoteCount )
+        return;
+
+    // Select a random index based on current time, if random option set
+    if ( fUseClamSpeechRandom && clamSpeechQuoteCount )
+    {
+        qDebug() << "Random quote selected";
+
+        qsrand( QDateTime::currentMSecsSinceEpoch() );
+        ui->clamQuotes->setCurrentIndex( qrand() % ui->clamQuotes->count() );
+    }
+    else // Fixed chosen quote
+    {
+        // Support out of bounds removal with already set index
+        if ( nClamSpeechIndex >= clamSpeechQuoteCount )
+            nClamSpeechIndex = clamSpeechQuoteCount -1;
+
+        ui->clamQuotes->setCurrentIndex( nClamSpeechIndex );
+    }
+
+    // Print debug info
+    qDebug() << clamSpeechQuoteCount << "CLAMSpeech quotes parsed.";
+    qDebug() << "fClamSpeechRandom =" << fUseClamSpeechRandom;
+    qDebug() << "nClamSpeechIndex =" << nClamSpeechIndex;
+    qDebug() << "CLAMSpeech selected index" << ui->clamQuotes->currentIndex();
+
+    // setup clamspeech widget change signal
+    connect( ui->clamQuotes, SIGNAL(currentIndexChanged(int)), this, SLOT(clamSpeechIndexChanged(int)) );
+}
+
+void SendCoinsDialog::uiReady()
+{
+    qDebug() << "SendCoinsDialog::uiReady()";
+    this->loadClamSpeech();
 }
 
 void SendCoinsDialog::updateDisplayUnit()

@@ -24,7 +24,7 @@ class CDiskTxPos;
 class COutPoint;
 class CTxIndex;
 
-extern uint nWalletDBUpdated;
+extern unsigned int nWalletDBUpdated;
 
 void ThreadFlushWalletDB(const std::string& strWalletFile);
 
@@ -226,7 +226,7 @@ protected:
         return pcursor;
     }
 
-    int ReadAtCursor(Dbc* pcursor, CDataStream& ssKey, CDataStream& ssValue, uint fFlags=DB_NEXT)
+    int ReadAtCursor(Dbc* pcursor, CDataStream& ssKey, CDataStream& ssValue, unsigned int fFlags=DB_NEXT)
     {
         // Read at cursor
         Dbt datKey;

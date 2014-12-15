@@ -15,17 +15,17 @@
 	<key>CFBundleExecutable</key>
 	<string>Clam-Qt</string>
 	<key>CFBundleIdentifier</key>
-	<string>info.clams.Clam-Qt</string>
+	<string>co.Clam.Clam-Qt</string>
         <key>CFBundleURLTypes</key>
         <array>
           <dict>
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
             <key>CFBundleURLName</key>
-            <string>info.clams.ClamPayment</string>
+            <string>co.Clam.ClamPayment</string>
             <key>CFBundleURLSchemes</key>
             <array>
-              <string>clam</string>
+              <string>Clam</string>
             </array>
           </dict>
         </array>

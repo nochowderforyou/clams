@@ -52,6 +52,9 @@ private:
     OptionsModel *optionsModel;
 
     int cachedNumBlocks;
+    int cachedNumBlocksOfPeers;
+	bool cachedReindexing;
+	bool cachedImporting;
 
     int numBlocksAtStartup;
 
@@ -67,7 +70,7 @@ signals:
     void bytesChanged(quint64 totalBytesIn, quint64 totalBytesOut);
 
     //! Asynchronous message notification
-    void message(const QString &title, const QString &message, bool modal, uint style);
+    void message(const QString &title, const QString &message, bool modal, unsigned int style);
 
 public slots:
     void updateTimer();

@@ -14,7 +14,7 @@
 
 namespace json_spirit
 {
-    inline char to_hex_char( uint c )
+    inline char to_hex_char( unsigned int c )
     {
         assert( c <= 0xF );
 
@@ -26,7 +26,7 @@ namespace json_spirit
     }
 
     template< class String_type >
-    String_type non_printable_to_string( uint c )
+    String_type non_printable_to_string( unsigned int c )
     {
         // Silence the warning: typedef ‘Char_type’ locally defined but not used [-Wunused-local-typedefs]
         // typedef typename String_type::value_type Char_type;

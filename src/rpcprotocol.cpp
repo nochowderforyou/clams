@@ -37,7 +37,7 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
 {
     ostringstream s;
     s << "POST / HTTP/1.1\r\n"
-      << "User-Agent: blackcoin-json-rpc/" << FormatFullVersion() << "\r\n"
+      << "User-Agent: Clam-json-rpc/" << FormatFullVersion() << "\r\n"
       << "Host: 127.0.0.1\r\n"
       << "Content-Type: application/json\r\n"
       << "Content-Length: " << strMsg.size() << "\r\n"
@@ -52,7 +52,7 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
 
 static string rfc1123Time()
 {
-      return DateTimeStrFormat("%a, %d %b %Y %H:%M:%S +0000", GetTime());
+    return DateTimeStrFormat("%a, %d %b %Y %H:%M:%S +0000", GetTime());
 }
 
 string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
@@ -60,7 +60,7 @@ string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
     if (nStatus == HTTP_UNAUTHORIZED)
         return strprintf("HTTP/1.0 401 Authorization Required\r\n"
             "Date: %s\r\n"
-            "Server: blackcoin-json-rpc/%s\r\n"
+            "Server: Clam-json-rpc/%s\r\n"
             "WWW-Authenticate: Basic realm=\"jsonrpc\"\r\n"
             "Content-Type: text/html\r\n"
             "Content-Length: 296\r\n"
@@ -87,7 +87,7 @@ string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "Connection: %s\r\n"
             "Content-Length: %"PRIszu"\r\n"
             "Content-Type: application/json\r\n"
-            "Server: blackcoin-json-rpc/%s\r\n"
+            "Server: Clam-json-rpc/%s\r\n"
             "\r\n"
             "%s",
         nStatus,

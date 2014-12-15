@@ -38,7 +38,7 @@ Q_IMPORT_PLUGIN(qtaccessiblewidgets)
 static BitcoinGUI *guiref;
 static QSplashScreen *splashref;
 
-static void ThreadSafeMessageBox(const std::string& message, const std::string& caption, uint style)
+static void ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
 {
     // Message from network thread
     if(guiref)
@@ -50,7 +50,7 @@ static void ThreadSafeMessageBox(const std::string& message, const std::string& 
                                    Q_ARG(QString, QString::fromStdString(caption)),
                                    Q_ARG(QString, QString::fromStdString(message)),
                                    Q_ARG(bool, modal),
-                                   Q_ARG(uint, style));
+                                   Q_ARG(unsigned int, style));
     }
     else
     {
@@ -113,7 +113,7 @@ static void handleRunawayException(std::exception *e)
 }
 
 /* qDebug() message handler --> debug.log */
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x052000
 void DebugMessageHandler(QtMsgType type, const char * msg)
 {
     const char *category = (type == QtDebugMsg) ? "qt" : NULL;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
     // Install global event filter that makes sure that long tooltips can be word-wrapped
     app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));
     // Install qDebug() message handler to route to debug.log
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x052000
     qInstallMsgHandler(DebugMessageHandler);
 #else
     qInstallMessageHandler(DebugMessageHandler);
@@ -317,22 +317,18 @@ int main(int argc, char *argv[])
 
                 // If -min option passed, start window minimized.
                 if(GetBoolArg("-min", false))
-                {
                     window.showMinimized();
-                }
-                else
-                {
-                    window.show();
-                }
 
                 // Now that initialization/startup is done, process any command-line
                 // bitcoin: URIs
                 QObject::connect(paymentServer, SIGNAL(receivedURI(QString)), &window, SLOT(handleURI(QString)));
                 QTimer::singleShot(100, paymentServer, SLOT(uiReady()));
 
+                // tell BitcoinGUI the backend is finished
+                QTimer::singleShot(100, &window, SLOT(uiReady()));
+
                 app.exec();
 
-                window.hide();
                 window.setClientModel(0);
                 window.setWalletModel(0);
                 guiref = 0;

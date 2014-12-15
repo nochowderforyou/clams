@@ -39,13 +39,13 @@
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
 
 #if defined (OPTIMIZED_SALSA) && ( defined (__x86_64__) || defined (__i386__) || defined(__arm__) )
-extern "C" void scrypt_core(uint *X, uint *V);
+extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
 #else
 // Generic scrypt_core implementation
 
-static inline void xor_salsa8(uint B[16], const uint Bx[16])
+static inline void xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
 {
-    uint x00,x01,x02,x03,x04,x05,x06,x07,x08,x09,x10,x11,x12,x13,x14,x15;
+    unsigned int x00,x01,x02,x03,x04,x05,x06,x07,x08,x09,x10,x11,x12,x13,x14,x15;
     int i;
 
     x00 = (B[0] ^= Bx[0]);
@@ -111,9 +111,9 @@ static inline void xor_salsa8(uint B[16], const uint Bx[16])
     B[15] += x15;
 }
 
-static inline void scrypt_core(uint *X, uint *V)
+static inline void scrypt_core(unsigned int *X, unsigned int *V)
 {
-    uint i, j, k;
+    unsigned int i, j, k;
 
     for (i = 0; i < 1024; i++) {
         memcpy(&V[i * 32], X, 128);
@@ -138,10 +138,10 @@ static inline void scrypt_core(uint *X, uint *V)
 
 uint256 scrypt_nosalt(const void* input, size_t inputlen, void *scratchpad)
 {
-    uint *V;
-    uint X[32];
+    unsigned int *V;
+    unsigned int X[32];
     uint256 result = 0;
-    V = (uint *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
+    V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
 
     PBKDF2_SHA256((const uint8_t*)input, inputlen, (const uint8_t*)input, inputlen, 1, (uint8_t *)X, 128);
     scrypt_core(X, V);
@@ -152,10 +152,10 @@ uint256 scrypt_nosalt(const void* input, size_t inputlen, void *scratchpad)
 
 uint256 scrypt(const void* data, size_t datalen, const void* salt, size_t saltlen, void *scratchpad)
 {
-    uint *V;
-    uint X[32];
+    unsigned int *V;
+    unsigned int X[32];
     uint256 result = 0;
-    V = (uint *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
+    V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
 
     PBKDF2_SHA256((const uint8_t*)data, datalen, (const uint8_t*)salt, saltlen, 1, (uint8_t *)X, 128);
     scrypt_core(X, V);
@@ -176,12 +176,12 @@ uint256 scrypt_salted_hash(const void* input, size_t inputlen, const void* salt,
     return scrypt(input, inputlen, salt, saltlen, scratchpad);
 }
 
-uint256 scrypt_salted_multiround_hash(const void* input, size_t inputlen, const void* salt, size_t saltlen, const uint nRounds)
+uint256 scrypt_salted_multiround_hash(const void* input, size_t inputlen, const void* salt, size_t saltlen, const unsigned int nRounds)
 {
     uint256 resultHash = scrypt_salted_hash(input, inputlen, salt, saltlen);
     uint256 transitionalHash = resultHash;
 
-    for(uint i = 1; i < nRounds; i++)
+    for(unsigned int i = 1; i < nRounds; i++)
     {
         resultHash = scrypt_salted_hash(input, inputlen, (const void*)&transitionalHash, 32);
         transitionalHash = resultHash;

@@ -215,7 +215,7 @@ public:
         }
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
-        uint nSize = ECDSA_size(pkey);
+        unsigned int nSize = ECDSA_size(pkey);
         vchSig.resize(nSize); // Make sure it is big enough
         unsigned char *pos = &vchSig[0];
         nSize = i2d_ECDSA_SIG(sig, &pos);
@@ -560,7 +560,7 @@ bool CPubKey::Decompress() {
     return true;
 }
 
-void static BIP32Hash(const unsigned char chainCode[32], uint nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]) {
+void static BIP32Hash(const unsigned char chainCode[32], unsigned int nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]) {
     unsigned char num[4];
     num[0] = (nChild >> 24) & 0xFF;
     num[1] = (nChild >> 16) & 0xFF;
@@ -574,7 +574,7 @@ void static BIP32Hash(const unsigned char chainCode[32], uint nChild, unsigned c
     HMAC_SHA512_Final(output, &ctx);
 }
 
-bool CKey::Derive(CKey& keyChild, unsigned char ccChild[32], uint nChild, const unsigned char cc[32]) const {
+bool CKey::Derive(CKey& keyChild, unsigned char ccChild[32], unsigned int nChild, const unsigned char cc[32]) const {
     assert(IsValid());
     assert(IsCompressed());
     unsigned char out[64];
@@ -595,7 +595,7 @@ bool CKey::Derive(CKey& keyChild, unsigned char ccChild[32], uint nChild, const 
     return ret;
 }
 
-bool CPubKey::Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], uint nChild, const unsigned char cc[32]) const {
+bool CPubKey::Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], unsigned int nChild, const unsigned char cc[32]) const {
     assert(IsValid());
     assert((nChild >> 31) == 0);
     assert(begin() + 33 == end());
@@ -609,7 +609,7 @@ bool CPubKey::Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], uint nChil
     return ret;
 }
 
-bool CExtKey::Derive(CExtKey &out, uint nChild) const {
+bool CExtKey::Derive(CExtKey &out, unsigned int nChild) const {
     out.nDepth = nDepth + 1;
     CKeyID id = key.GetPubKey().GetID();
     memcpy(&out.vchFingerprint[0], &id, 4);
@@ -617,7 +617,7 @@ bool CExtKey::Derive(CExtKey &out, uint nChild) const {
     return key.Derive(out.key, out.vchChainCode, nChild, vchChainCode);
 }
 
-void CExtKey::SetMaster(const unsigned char *seed, uint nSeedLen) {
+void CExtKey::SetMaster(const unsigned char *seed, unsigned int nSeedLen) {
     static const char hashkey[] = {'B','i','t','c','o','i','n',' ','s','e','e','d'};
     HMAC_SHA512_CTX ctx;
     HMAC_SHA512_Init(&ctx, hashkey, sizeof(hashkey));
@@ -680,7 +680,7 @@ void CExtPubKey::Decode(const unsigned char code[74]) {
     pubkey.Set(code+41, code+74);
 }
 
-bool CExtPubKey::Derive(CExtPubKey &out, uint nChild) const {
+bool CExtPubKey::Derive(CExtPubKey &out, unsigned int nChild) const {
     out.nDepth = nDepth + 1;
     CKeyID id = pubkey.GetID();
     memcpy(&out.vchFingerprint[0], &id, 4);

@@ -29,8 +29,8 @@ static void accountingDeprecationCheck()
             "It can easily result in negative or odd balances if misused or misunderstood, which has happened in the field.\n"
             "If you still want to enable it, add to your config file enableaccounts=1\n");
 
-    if (GetBoolArg("-staking", true))
-        throw runtime_error("If you want to use accounting API, staking must be disabled, add to your config file staking=0\n");
+    // if (GetBoolArg("-staking", true))
+    //     throw runtime_error("If you want to use accounting API, staking must be disabled, add to your config file staking=0\n");
 }
 
 std::string HelpRequiringPassphrase()
@@ -367,6 +367,68 @@ Value signmessage(const Array& params, bool fHelp)
     return EncodeBase64(&vchSig[0], vchSig.size());
 }
 
+Value getstakedbyaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "getstakedbyaddress <clamaddress|*> [minconf=1]\n"
+            "Returns the total reward (including fees) earned from staking by <clamaddress> with at least [minconf] confirmations.");
+
+    // Bitcoin address
+    bool fAllAddresses = (params[0].get_str() == "*");
+    CBitcoinAddress address;
+    CScript scriptPubKey;
+    CKeyID keyID;
+    CKey key;
+
+    if (!fAllAddresses) {
+        address = CBitcoinAddress(params[0].get_str());
+
+        if (!address.IsValid())
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Clam address");
+
+        if (!address.GetKeyID(keyID))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find keyID for Clam address");
+
+        if (!pwalletMain->GetKey(keyID, key))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Can't find key for Clam address");
+
+        scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
+
+        if (!IsMine(*pwalletMain,scriptPubKey))
+            return (double)0.0;
+    }
+
+    // Minimum confirmations
+    int nMinDepth = 1;
+    if (params.size() > 1)
+        nMinDepth = params[1].get_int();
+
+    string strAccount;
+
+    // Tally
+    int64_t nAmount = 0;
+    for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
+    {
+        const CWalletTx& wtx = (*it).second;
+        if (!wtx.IsCoinStake() || !IsFinalTx(wtx) || wtx.GetDepthInMainChain() < nMinDepth)
+            continue;
+
+        BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+            if (fAllAddresses || txout.scriptPubKey == scriptPubKey) {
+                int64_t nFee;
+                list<pair<CTxDestination, int64_t> > listReceived;
+                list<pair<CTxDestination, int64_t> > listSent;
+
+                wtx.GetAmounts(listReceived, listSent, nFee, strAccount);
+                nAmount -= nFee;
+                break;
+            }
+    }
+
+    return  ValueFromAmount(nAmount);
+}
+ 
 Value getreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
@@ -532,6 +594,8 @@ Value getbalance(const Array& params, bool fHelp)
         return  ValueFromAmount(nBalance);
     }
 
+    throw runtime_error("getbalance doesn't work for specific accounts.");
+
     accountingDeprecationCheck();
 
     string strAccount = AccountFromValue(params[0]);
@@ -677,8 +741,6 @@ Value sendmany(const Array& params, bool fHelp)
         if (!address.IsValid())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid Clam address: ")+s.name_);
 
-        if (setAddress.count(address))
-            throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, duplicated address: ")+s.name_);
         setAddress.insert(address);
 
         CScript scriptPubKey;
@@ -739,7 +801,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
                       "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CPubKey> pubkeys;
     pubkeys.resize(keys.size());
-    for (uint i = 0; i < keys.size(); i++)
+    for (unsigned int i = 0; i < keys.size(); i++)
     {
         const std::string& ks = keys[i].get_str();
 
@@ -1098,6 +1160,51 @@ Value listtransactions(const Array& params, bool fHelp)
     return ret;
 }
 
+Value listbalances(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 3)
+        throw runtime_error(
+            "listbalances [minconf=1] [maxconf=9999999] [mature=1]\n"
+            "Returns Object that has addresses as keys, address balances as values.");
+
+    int nMinDepth = 1;
+    if (params.size() > 0)
+        nMinDepth = params[0].get_int();
+
+    int nMaxDepth = 9999999;
+    if (params.size() > 1)
+        nMaxDepth = params[1].get_int();
+
+    bool fMature = true;
+    if (params.size() > 2)
+        fMature = (params[2].get_int() != 0);
+
+    map<string, int64_t> mapAddressBalances;
+    vector<COutput> vecOutputs;
+    pwalletMain->AvailableCoins(vecOutputs, false, NULL, fMature);
+
+    BOOST_FOREACH(const COutput& out, vecOutputs) {
+        if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)
+            continue;
+
+        int64_t nValue = out.tx->vout[out.i].nValue;
+        CTxDestination address;
+        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {
+            string sAddress(CBitcoinAddress(address).ToString());
+            if (mapAddressBalances.count(sAddress) == 0)
+                mapAddressBalances[sAddress] = nValue;
+            else
+                mapAddressBalances[sAddress] += nValue;
+        }
+    }
+
+    Object ret;
+    BOOST_FOREACH(const PAIRTYPE(string, int64_t)& addressBalance, mapAddressBalances)
+        ret.push_back(Pair(addressBalance.first, ValueFromAmount(addressBalance.second)));
+
+    return ret;
+}
+
 Value listaccounts(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
@@ -1124,6 +1231,11 @@ Value listaccounts(const Array& params, bool fHelp)
         string strSentAccount;
         list<pair<CTxDestination, int64_t> > listReceived;
         list<pair<CTxDestination, int64_t> > listSent;
+
+        // don't count staking in account balances - if you stake 5 into 6, it was adding 6, and not taking off the 5
+        if (wtx.IsCoinBase() || wtx.IsCoinStake())
+            continue;
+
         int nDepth = wtx.GetDepthInMainChain();
         if (nDepth < 0)
             continue;
@@ -1303,11 +1415,11 @@ Value keypoolrefill(const Array& params, bool fHelp)
             "Fills the keypool."
             + HelpRequiringPassphrase());
 
-    uint nSize = max(GetArg("-keypool", 100), (int64_t)0);
+    unsigned int nSize = max(GetArg("-keypool", 100), (int64_t)0);
     if (params.size() > 0) {
         if (params[0].get_int() < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected valid size");
-        nSize = (uint) params[0].get_int();
+        nSize = (unsigned int) params[0].get_int();
     }
 
     EnsureWalletIsUnlocked();
@@ -1591,10 +1703,10 @@ Value settxfee(const Array& params, bool fHelp)
     if (fHelp || params.size() < 1 || params.size() > 1 || AmountFromValue(params[0]) < MIN_TX_FEE)
         throw runtime_error(
             "settxfee <amount>\n"
-            "<amount> is a real and is rounded to the nearest 0.01");
+            "<amount> is a real and is rounded to the nearest 0.0001");
 
     nTransactionFee = AmountFromValue(params[0]);
-    nTransactionFee = (nTransactionFee / CENT) * CENT;  // round to cent
+    nTransactionFee = ((nTransactionFee + CENT/200) / (CENT/100)) * (CENT/100);  // round to hundredth of cent
 
     return true;
 }

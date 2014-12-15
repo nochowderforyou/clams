@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef unsigned int uint;
 typedef unsigned long long  uint64;
 typedef long long int64;
 
@@ -23,12 +22,12 @@ inline int Testuint256AdHoc(std::vector<std::string> vArg);
 /** Base class without constructors for uint256 and uint160.
  * This makes the compiler let u use it in a union.
  */
-template<uint BITS>
+template<unsigned int BITS>
 class base_uint
 {
 protected:
     enum { WIDTH=BITS/32 };
-    uint pn[WIDTH];
+    unsigned int pn[WIDTH];
 public:
 
     bool operator!() const
@@ -69,8 +68,8 @@ public:
 
     base_uint& operator=(uint64_t b)
     {
-        pn[0] = (uint)b;
-        pn[1] = (uint)(b >> 32);
+        pn[0] = (unsigned int)b;
+        pn[1] = (unsigned int)(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -99,19 +98,19 @@ public:
 
     base_uint& operator^=(uint64_t b)
     {
-        pn[0] ^= (uint)b;
-        pn[1] ^= (uint)(b >> 32);
+        pn[0] ^= (unsigned int)b;
+        pn[1] ^= (unsigned int)(b >> 32);
         return *this;
     }
 
     base_uint& operator|=(uint64_t b)
     {
-        pn[0] |= (uint)b;
-        pn[1] |= (uint)(b >> 32);
+        pn[0] |= (unsigned int)b;
+        pn[1] |= (unsigned int)(b >> 32);
         return *this;
     }
 
-    base_uint& operator<<=(uint shift)
+    base_uint& operator<<=(unsigned int shift)
     {
         base_uint a(*this);
         for (int i = 0; i < WIDTH; i++)
@@ -128,7 +127,7 @@ public:
         return *this;
     }
 
-    base_uint& operator>>=(uint shift)
+    base_uint& operator>>=(unsigned int shift)
     {
         base_uint a(*this);
         for (int i = 0; i < WIDTH; i++)
@@ -273,9 +272,9 @@ public:
 
     friend inline bool operator==(const base_uint& a, uint64_t b)
     {
-        if (a.pn[0] != (uint)b)
+        if (a.pn[0] != (unsigned int)b)
             return false;
-        if (a.pn[1] != (uint)(b >> 32))
+        if (a.pn[1] != (unsigned int)(b >> 32))
             return false;
         for (int i = 2; i < base_uint::WIDTH; i++)
             if (a.pn[i] != 0)
@@ -298,7 +297,7 @@ public:
     std::string GetHex() const
     {
         char psz[sizeof(pn)*2 + 1];
-        for (uint i = 0; i < sizeof(pn); i++)
+        for (unsigned int i = 0; i < sizeof(pn); i++)
             sprintf(psz + i*2, "%02x", ((unsigned char*)pn)[sizeof(pn) - i - 1]);
         return std::string(psz, psz + sizeof(pn)*2);
     }
@@ -355,7 +354,7 @@ public:
         return (unsigned char*)&pn[WIDTH];
     }
 
-    uint size()
+    unsigned int size()
     {
         return sizeof(pn);
     }
@@ -365,7 +364,7 @@ public:
         return pn[2*n] | (uint64_t)pn[2*n+1] << 32;
     }
 
-    uint GetSerializeSize(int nType, int nVersion) const
+    unsigned int GetSerializeSize(int nType, int nVersion) const
     {
         return sizeof(pn);
     }
@@ -402,7 +401,7 @@ typedef base_uint<256> base_uint256;
 // uint160
 //
 
-/** 160-bit uinteger */
+/** 160-bit unsigned integer */
 class uint160 : public base_uint160
 {
 public:
@@ -429,16 +428,16 @@ public:
 
     uint160(uint64_t b)
     {
-        pn[0] = (uint)b;
-        pn[1] = (uint)(b >> 32);
+        pn[0] = (unsigned int)b;
+        pn[1] = (unsigned int)(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
     }
 
     uint160& operator=(uint64_t b)
     {
-        pn[0] = (uint)b;
-        pn[1] = (uint)(b >> 32);
+        pn[0] = (unsigned int)b;
+        pn[1] = (unsigned int)(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -460,10 +459,10 @@ public:
 
 inline bool operator==(const uint160& a, uint64_t b)                         { return (base_uint160)a == b; }
 inline bool operator!=(const uint160& a, uint64_t b)                         { return (base_uint160)a != b; }
-inline const uint160 operator<<(const base_uint160& a, uint shift)   { return uint160(a) <<= shift; }
-inline const uint160 operator>>(const base_uint160& a, uint shift)   { return uint160(a) >>= shift; }
-inline const uint160 operator<<(const uint160& a, uint shift)        { return uint160(a) <<= shift; }
-inline const uint160 operator>>(const uint160& a, uint shift)        { return uint160(a) >>= shift; }
+inline const uint160 operator<<(const base_uint160& a, unsigned int shift)   { return uint160(a) <<= shift; }
+inline const uint160 operator>>(const base_uint160& a, unsigned int shift)   { return uint160(a) >>= shift; }
+inline const uint160 operator<<(const uint160& a, unsigned int shift)        { return uint160(a) <<= shift; }
+inline const uint160 operator>>(const uint160& a, unsigned int shift)        { return uint160(a) >>= shift; }
 
 inline const uint160 operator^(const base_uint160& a, const base_uint160& b) { return uint160(a) ^= b; }
 inline const uint160 operator&(const base_uint160& a, const base_uint160& b) { return uint160(a) &= b; }
@@ -517,7 +516,7 @@ inline const uint160 operator-(const uint160& a, const uint160& b)      { return
 // uint256
 //
 
-/** 256-bit uinteger */
+/** 256-bit unsigned integer */
 class uint256 : public base_uint256
 {
 public:
@@ -544,16 +543,16 @@ public:
 
     uint256(uint64_t b)
     {
-        pn[0] = (uint)b;
-        pn[1] = (uint)(b >> 32);
+        pn[0] = (unsigned int)b;
+        pn[1] = (unsigned int)(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
     }
 
     uint256& operator=(uint64_t b)
     {
-        pn[0] = (uint)b;
-        pn[1] = (uint)(b >> 32);
+        pn[0] = (unsigned int)b;
+        pn[1] = (unsigned int)(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -575,10 +574,10 @@ public:
 
 inline bool operator==(const uint256& a, uint64_t b)                         { return (base_uint256)a == b; }
 inline bool operator!=(const uint256& a, uint64_t b)                         { return (base_uint256)a != b; }
-inline const uint256 operator<<(const base_uint256& a, uint shift)   { return uint256(a) <<= shift; }
-inline const uint256 operator>>(const base_uint256& a, uint shift)   { return uint256(a) >>= shift; }
-inline const uint256 operator<<(const uint256& a, uint shift)        { return uint256(a) <<= shift; }
-inline const uint256 operator>>(const uint256& a, uint shift)        { return uint256(a) >>= shift; }
+inline const uint256 operator<<(const base_uint256& a, unsigned int shift)   { return uint256(a) <<= shift; }
+inline const uint256 operator>>(const base_uint256& a, unsigned int shift)   { return uint256(a) >>= shift; }
+inline const uint256 operator<<(const uint256& a, unsigned int shift)        { return uint256(a) <<= shift; }
+inline const uint256 operator>>(const uint256& a, unsigned int shift)        { return uint256(a) >>= shift; }
 
 inline const uint256 operator^(const base_uint256& a, const base_uint256& b) { return uint256(a) ^= b; }
 inline const uint256 operator&(const base_uint256& a, const base_uint256& b) { return uint256(a) &= b; }

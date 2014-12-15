@@ -9,6 +9,7 @@
 
 #include "init.h"
 #include "main.h"
+#include "base58.h"
 #include "chainparams.h"
 #include "txdb.h"
 #include "rpcserver.h"
@@ -16,6 +17,7 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
+#include "util.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
 #include "walletdb.h"
@@ -43,11 +45,14 @@ CClientUIInterface uiInterface;
 std::string strWalletFileName;
 bool fConfChange;
 bool fMinimizeCoinAge;
-uint nNodeLifespan;
-uint nDerivationMethodIndex;
-uint nMinerSleep;
+unsigned int nNodeLifespan;
+unsigned int nDerivationMethodIndex;
+unsigned int nMinerSleep;
+unsigned int nMaxStakeValue;
+int64_t nSplitSize;
 bool fUseFastIndex;
 enum Checkpoints::CPMode CheckpointsMode;
+set<CBitcoinAddress> setSpendLastAddresses;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -98,7 +103,7 @@ void Shutdown()
     if (!lockShutdown) return;
 
     RenameThread("clam-shutoff");
-    nTransactionsUpdated++;
+    mempool.AddTransactionsUpdated(1);
     StopRPCThreads();
 #ifdef ENABLE_WALLET
     ShutdownRPCMining();
@@ -233,7 +238,7 @@ std::string HelpMessage()
                                                 "solved instantly. This is intended for regression testing tools and app development.") + "\n";
     strUsage += "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n";
     strUsage += "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n";
-    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 15715 or testnet: 25715)") + "\n";
+    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 30174 or testnet: 25715)") + "\n";
     strUsage += "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n";
     if (!fHaveGUI)
     {
@@ -241,14 +246,18 @@ std::string HelpMessage()
         strUsage += "  -rpcwait               " + _("Wait for RPC server to start") + "\n";
     }
     strUsage += "  -rpcthreads=<n>        " + _("Set the number of threads to service RPC calls (default: 4)") + "\n";
+    strUsage += "  -clamspeech=off        " + _("Set clamspeech=off to turn off random clamspeech quotes in outgoing transactions") + "\n";
+    strUsage += "  -clamstake=off         " + _("Set clamstake=off to turn off random clamspeech quotes when staking") + "\n";
     strUsage += "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n";
     strUsage += "  -walletnotify=<cmd>    " + _("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)") + "\n";
+    strUsage += "  -spendlast=<addr>      " + _("Avoid spending outputs from given address(es) if possible") + "\n";
     strUsage += "  -confchange            " + _("Require a confirmations for change (default: 0)") + "\n";
     strUsage += "  -minimizecoinage       " + _("Minimize weight consumption (experimental) (default: 0)") + "\n";
     strUsage += "  -alertnotify=<cmd>     " + _("Execute command when a relevant alert is received (%s in cmd is replaced by message)") + "\n";
     strUsage += "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n";
     strUsage += "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n";
     strUsage += "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n";
+    strUsage += "  -reindex               " + _("Forces a reindex of the block DB and tx DB") + "\n";
     strUsage += "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n";
     strUsage += "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 500, 0 = all)") + "\n";
     strUsage += "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n";
@@ -338,6 +347,14 @@ bool AppInit2(boost::thread_group& threadGroup)
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinerSleep = GetArg("-minersleep", 500);
+    nMaxStakeValue = GetArg("-maxstakevalue", 0) * COIN;
+    nSplitSize = GetArg("-splitsize", 0) * COIN;
+
+    // we want to avoid spending coins in these addresses if possible
+    if (mapArgs.count("-spendlast")) {
+        BOOST_FOREACH(std::string strKeep, mapMultiArgs["-spendlast"])
+            setSpendLastAddresses.insert(CBitcoinAddress(strKeep));
+    }
 
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
@@ -370,8 +387,11 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 
     if (mapArgs.count("-proxy")) {
-        // to protect privacy, do not listen by default if a proxy server is specified
-        SoftSetBoolArg("-listen", false);
+        if (SoftSetBoolArg("-listen", false))
+            LogPrintf("AppInit2 : parameter interaction: -proxy set -> setting -listen=0\n");
+        // to protect privacy, do not discover addresses by default
+        if (SoftSetBoolArg("-discover", false))
+            LogPrintf("AppInit2 : parameter interaction: -proxy set -> setting -discover=0\n");
     }
 
     if (!GetBoolArg("-listen", true)) {
@@ -448,7 +468,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     // Sanity check
     if (!InitSanityCheck())
-        return InitError(_("Initialization sanity check failed. BlackCoin is shutting down."));
+        return InitError(_("Initialization sanity check failed. Clam is shutting down."));
 
     std::string strDataDir = GetDataDir().string();
 #ifdef ENABLE_WALLET
@@ -487,6 +507,13 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (!fDisableWallet) {
         uiInterface.InitMessage(_("Verifying database integrity..."));
 
+        if (GetBoolArg("-reindex", false) )
+        {
+            LogPrintf("Reindex remove database directory\n");
+            boost::filesystem::path pathDatabase = GetDataDir() / "database";
+            boost::filesystem::remove_all(pathDatabase);
+        }
+
         if (!bitdb.Open(GetDataDir()))
         {
             // try moving the database env out of the way
@@ -506,6 +533,7 @@ bool AppInit2(boost::thread_group& threadGroup)
                 return InitError(msg);
             }
         }
+
 
         if (GetBoolArg("-salvagewallet", false))
         {
@@ -530,6 +558,9 @@ bool AppInit2(boost::thread_group& threadGroup)
         }
     } // (!fDisableWallet)
 #endif // ENABLE_WALLET
+
+    if(!LoadClamSpeech())
+    	return InitError(_("Failed to load CLAMspeech"));
     // ********************************************************* Step 6: network initialization
 
     RegisterNodeSignals(GetNodeSignals());
@@ -655,8 +686,15 @@ bool AppInit2(boost::thread_group& threadGroup)
     uiInterface.InitMessage(_("Loading block index..."));
 
     nStart = GetTimeMillis();
-    if (!LoadBlockIndex())
-        return InitError(_("Error loading blkindex.dat"));
+
+    if (GetBoolArg("-reindex", false)) 
+    {
+	   if (!LoadBlockIndex(true, true))
+            return InitError(_("Reindex: Error loading block index database"));
+    } else { 		
+    	if (!LoadBlockIndex())
+            return InitError(_("Error loading block index database : try running with -reindex"));
+    }
 
 
     // as LoadBlockIndex can take several minutes, it's possible the user
@@ -697,6 +735,8 @@ bool AppInit2(boost::thread_group& threadGroup)
         return false;
     }
 
+    
+
     // ********************************************************* Step 8: load wallet
 #ifdef ENABLE_WALLET
     if (fDisableWallet) {
@@ -720,10 +760,10 @@ bool AppInit2(boost::thread_group& threadGroup)
                 InitWarning(msg);
             }
             else if (nLoadWalletRet == DB_TOO_NEW)
-                strErrors << _("Error loading wallet.dat: Wallet requires newer version of BlackCoin") << "\n";
+                strErrors << _("Error loading wallet.dat: Wallet requires newer version of Clam") << "\n";
             else if (nLoadWalletRet == DB_NEED_REWRITE)
             {
-                strErrors << _("Wallet needed to be rewritten: restart BlackCoin to complete") << "\n";
+                strErrors << _("Wallet needed to be rewritten: restart Clam to complete") << "\n";
                 LogPrintf("%s", strErrors.str());
                 return InitError(strErrors.str());
             }

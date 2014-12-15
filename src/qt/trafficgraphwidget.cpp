@@ -60,7 +60,7 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
 {
     const QString units = tr("KB/s");
     QPainter painter(this);
-    painter.setRenderHints(QPainter::HighQualityAntialiasing);
+    //painter.setRenderHints(QPainter::HighQualityAntialiasing);
     painter.fillRect(rect(), Qt::black);
 
     if(fMax <= 0.0f) return;

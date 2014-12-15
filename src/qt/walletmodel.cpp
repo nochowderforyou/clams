@@ -479,7 +479,7 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     }
 }
 
-bool WalletModel::isLockedCoin(uint256 hash, uint n) const
+bool WalletModel::isLockedCoin(uint256 hash, unsigned int n) const
 {
     return false;
 }
@@ -497,4 +497,9 @@ void WalletModel::unlockCoin(COutPoint& output)
 void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
 {
     return;
+}
+
+void WalletModel::clearOrphans()
+{
+    wallet->ClearOrphans();
 }

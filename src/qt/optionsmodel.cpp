@@ -10,9 +10,14 @@
 #include "walletdb.h"
 #include "guiutil.h"
 
+#include <QDebug>
 #include <QSettings>
 
+// shared UI settings in guiutil.h
 bool fUseClamTheme;
+bool fUseClamSpeech;
+bool fUseClamSpeechRandom;
+int  nClamSpeechIndex;
 
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
@@ -55,6 +60,9 @@ void OptionsModel::Init()
     nReserveBalance = settings.value("nReserveBalance").toLongLong();
     language = settings.value("language", "").toString();
     fUseClamTheme = settings.value("fUseClamTheme", true).toBool();
+    fUseClamSpeech = settings.value("fUseClamSpeech", true).toBool();
+    fUseClamSpeechRandom = settings.value("fUseClamSpeechRandom", true).toBool();
+    nClamSpeechIndex = settings.value("nClamSpeechIndex", 0).toInt();
 
     // These are shared with core Bitcoin; we want
     // command-line options to override the GUI settings:
@@ -68,6 +76,8 @@ void OptionsModel::Init()
         SoftSetBoolArg("-minimizecoinage", settings.value("fMinimizeCoinAge").toBool());
     if (!language.isEmpty())
         SoftSetArg("-lang", language.toStdString());
+
+    qDebug() << "QSettings loaded.";
 }
 
 int OptionsModel::rowCount(const QModelIndex & parent) const
@@ -122,6 +132,12 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("fMinimizeCoinAge", GetBoolArg("-minimizecoinage", false));
         case UseClamTheme:
             return QVariant(fUseClamTheme);
+        case UseClamSpeech:
+            return QVariant(fUseClamSpeech);
+        case UseClamSpeechRandom:
+            return QVariant(fUseClamSpeechRandom);
+        case ClamSpeechIndex:
+            return QVariant(nClamSpeechIndex);
         default:
             return QVariant();
         }
@@ -165,8 +181,8 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             proxy.first.SetIP(addr);
             settings.setValue("addrProxy", proxy.first.ToStringIPPort().c_str());
             successful = ApplyProxySettings();
-        }
-        break;
+            }
+            break;
         case ProxyPort: {
             proxyType proxy;
             proxy.first = CService("127.0.0.1", 9050);
@@ -175,8 +191,8 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             proxy.first.SetPort(value.toInt());
             settings.setValue("addrProxy", proxy.first.ToStringIPPort().c_str());
             successful = ApplyProxySettings();
-        }
-        break;
+            }
+            break;
         case ProxySocksVersion: {
             proxyType proxy;
             proxy.second = 5;
@@ -185,8 +201,8 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             proxy.second = value.toInt();
             settings.setValue("nSocksVersion", proxy.second);
             successful = ApplyProxySettings();
-        }
-        break;
+            }
+            break;
         case Fee:
             nTransactionFee = value.toLongLong();
             settings.setValue("nTransactionFee", (qint64) nTransactionFee);
@@ -212,12 +228,24 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             }
             break;
         case MinimizeCoinAge:
-           fMinimizeCoinAge = value.toBool();
-           settings.setValue("fMinimizeCoinAge", fMinimizeCoinAge);
-           break;
+            fMinimizeCoinAge = value.toBool();
+            settings.setValue("fMinimizeCoinAge", fMinimizeCoinAge);
+            break;
         case UseClamTheme:
             fUseClamTheme = value.toBool();
             settings.setValue("fUseClamTheme", fUseClamTheme);
+            break;
+        case UseClamSpeech:
+            fUseClamSpeech = value.toBool();
+            settings.setValue("fUseClamSpeech", fUseClamSpeech);
+            break;
+        case UseClamSpeechRandom:
+            fUseClamSpeechRandom = value.toBool();
+            settings.setValue("fUseClamSpeechRandom", fUseClamSpeechRandom);
+            break;
+        case ClamSpeechIndex:
+            nClamSpeechIndex = value.toInt();
+            settings.setValue("nClamSpeechIndex", nClamSpeechIndex);
             break;
         default:
             break;

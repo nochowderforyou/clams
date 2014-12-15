@@ -23,6 +23,8 @@ class QLabel;
 class QModelIndex;
 class QProgressBar;
 class QStackedWidget;
+class QPushButton;
+class QActionGroup;
 QT_END_NAMESPACE
 
 /**
@@ -53,7 +55,10 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
 
+
 private:
+    bool eventFilter(QObject *object, QEvent *event);
+
     ClientModel *clientModel;
     WalletModel *walletModel;
 
@@ -81,7 +86,8 @@ private:
     QProgressBar *progressBar;
 
     // tabgroup actions
-    QMenuBar *appMenuBar;
+    QWidget *menuBlocks;
+    QActionGroup *tabGroup;
     QAction *overviewAction;
     QAction *receiveCoinsAction;
     QAction *sendCoinsAction;
@@ -91,6 +97,8 @@ private:
     QAction *rpcConsoleAction;
 
     // other menu actions
+    QMenu *fileMenu;
+    QMenu *miscMenu;
     QAction *quitAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
@@ -117,16 +125,19 @@ private:
 
     /** Create the main UI actions. */
     void createActions();
-    /** Create the menu bar and sub-menus. */
     void createMenuBar();
-    /** Create the toolbars */
     void createToolBars();
-    /** Create system tray (notification) icon */
     void createTrayIcon();
 
     void toggleExportButton(bool toggle);
 
+    void updateStyle();
+    void writeDefultStyleSheet(const QString &qssPath);
+
 public slots:
+    // UI Ready notification
+    void uiReady();
+
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */
@@ -144,7 +155,7 @@ public slots:
        @param[in] style     style definitions (icon and used buttons - buttons only for message boxes)
                             @see CClientUIInterface::MessageBoxFlags
     */
-    void message(const QString &title, const QString &message, bool modal, uint style);
+    void message(const QString &title, const QString &message, bool modal, unsigned int style);
     /** Asks the user whether to pay the transaction fee or to cancel the transaction.
        It is currently not possible to pass a return value to another thread through
        BlockingQueuedConnection, so an indirected pointer is used.
@@ -206,6 +217,10 @@ private slots:
 
     /** called by a timer to check if fRequestShutdown has been set **/
     void detectShutdown();
+
+    void updateStyleSlot();
+    void showFileMenu();
+    void showMiscMenu();
 };
 
 #endif // BITCOINGUI_H

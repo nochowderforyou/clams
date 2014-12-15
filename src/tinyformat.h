@@ -553,7 +553,7 @@ class FormatIterator
         }
 
         static const char* streamStateFromFormat(std::ostream& out,
-                                                 uint& extraFlags,
+                                                 unsigned int& extraFlags,
                                                  const char* fmtStart,
                                                  int variableWidth,
                                                  int variablePrecision);
@@ -565,7 +565,7 @@ class FormatIterator
         // Stream, current format string & state
         std::ostream& m_out;
         const char* m_fmt;
-        uint m_extraFlags;
+        unsigned int m_extraFlags;
         // State machine info for handling of variable width & precision
         bool m_wantWidth;
         bool m_wantPrecision;
@@ -666,7 +666,7 @@ void FormatIterator::accept(const T& value)
 // state are returned in the extraFlags parameter which is a bitwise
 // combination of values from the ExtraFormatFlags enum.
 inline const char* FormatIterator::streamStateFromFormat(std::ostream& out,
-                                                         uint& extraFlags,
+                                                         unsigned int& extraFlags,
                                                          const char* fmtStart,
                                                          int variableWidth,
                                                          int variablePrecision)

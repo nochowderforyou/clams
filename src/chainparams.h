@@ -47,6 +47,9 @@ public:
         PUBKEY_ADDRESS,
         SCRIPT_ADDRESS,
         SECRET_KEY,
+        SECRET_KEY_BTC,
+        SECRET_KEY_LTC,
+        SECRET_KEY_DOGE,
         EXT_PUBLIC_KEY,
         EXT_SECRET_KEY,
 

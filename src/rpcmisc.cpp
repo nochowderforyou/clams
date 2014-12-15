@@ -9,6 +9,7 @@
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"
+#include "txdb.h"
 #include "timedata.h"
 #include "util.h"
 #ifdef ENABLE_WALLET
@@ -51,11 +52,13 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    obj.push_back(Pair("digsupply",     ValueFromAmount(pindexBest->nDigsupply)));
+    obj.push_back(Pair("stakesupply",   ValueFromAmount(pindexBest->nStakeSupply)));
+    obj.push_back(Pair("activesupply",  ValueFromAmount(pindexBest->nDigsupply + pindexBest->nStakeSupply)));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
-    obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
+    obj.push_back(Pair("ip",            GetLocalAddress(NULL).ToStringIP()));
 
-    diff.push_back(Pair("proof-of-work",  GetDifficulty()));
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("difficulty",    diff));
 
@@ -116,8 +119,8 @@ Value validateaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "validateaddress <blackcoinaddress>\n"
-            "Return information about <blackcoinaddress>.");
+            "validateaddress <Clamaddress>\n"
+            "Return information about <Clamaddress>.");
 
     CBitcoinAddress address(params[0].get_str());
     bool isValid = address.IsValid();
@@ -143,12 +146,174 @@ Value validateaddress(const Array& params, bool fHelp)
     return ret;
 }
 
+
+static void validateoutputs_check_unconfirmed_spend(COutPoint& outpoint, CTransaction& tx, Object& entry)
+{
+    // check whether unconfirmed output is already spent
+    LOCK(mempool.cs); // protect mempool.mapNextTx
+    if (mempool.mapNextTx.count(outpoint)) {
+        // pull details from mempool
+        CInPoint in = mempool.mapNextTx[outpoint];
+        Object details;
+        entry.push_back(Pair("status", "spent"));
+        details.push_back(Pair("txid", in.ptx->GetHash().GetHex()));
+        details.push_back(Pair("vin", int(in.n)));
+        details.push_back(Pair("confirmations", 0));
+        entry.push_back(Pair("spent", details));
+    } else {
+        entry.push_back(Pair("status", "unspent"));
+
+        const CScript& pk = tx.vout[outpoint.n].scriptPubKey;
+        entry.push_back(Pair("scriptPubKey", HexStr(pk.begin(), pk.end())));
+    }
+}
+
+Value validateoutputs(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "validateoutputs [{\"txid\":txid,\"vout\":n},...]\n"
+            "Return information about outputs (whether they exist, and whether they have been spent).");
+
+    Array inputs = params[0].get_array();
+
+    CTxDB txdb("r");
+    CTxIndex txindex;
+    Array ret;
+
+    BOOST_FOREACH(Value& input, inputs)
+    {
+        const Object& o = input.get_obj();
+
+        const Value& txid_v = find_value(o, "txid");
+        if (txid_v.type() != str_type)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing txid key");
+        string txid = txid_v.get_str();
+        if (!IsHex(txid))
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex txid");
+
+        const Value& vout_v = find_value(o, "vout");
+        if (vout_v.type() != int_type)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing vout key");
+        int nOutput = vout_v.get_int();
+        if (nOutput < 0)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
+
+        Object entry;
+        entry.push_back(Pair("txid", txid));
+        entry.push_back(Pair("vout", nOutput));
+
+        CTransaction tx;
+        uint256 hashBlock = 0;
+        CTxIndex txindex;
+        COutPoint outpoint(uint256(txid), nOutput);
+
+        // find the output
+        if (!GetTransaction(uint256(txid), tx, hashBlock, txindex)) {
+            entry.push_back(Pair("status", "txid not found"));
+            ret.push_back(entry);
+            continue;
+        }
+
+        // check that the output number is in range
+        if ((unsigned)nOutput >= tx.vout.size()) {
+            entry.push_back(Pair("status", "vout too high"));
+            entry.push_back(Pair("outputs", (int)tx.vout.size()));
+            ret.push_back(entry);
+            continue;
+        }
+
+        entry.push_back(Pair("amount", ValueFromAmount(tx.vout[nOutput].nValue)));
+
+        // get the address and account
+        CTxDestination address;
+        if (ExtractDestination(tx.vout[nOutput].scriptPubKey, address))
+        {
+            entry.push_back(Pair("address", CBitcoinAddress(address).ToString()));
+            if (pwalletMain->mapAddressBook.count(address))
+                entry.push_back(Pair("account", pwalletMain->mapAddressBook[address]));
+        }
+
+        // is the output confirmed?
+        if (hashBlock == 0) {
+            entry.push_back(Pair("confirmations", 0));
+            validateoutputs_check_unconfirmed_spend(outpoint, tx, entry);
+            ret.push_back(entry);
+            continue;
+        }
+
+        // find the block containing the output
+        map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
+        if (mi != mapBlockIndex.end() && (*mi).second)
+        {
+            CBlockIndex* pindex = (*mi).second;
+            if (pindex->IsInMainChain()) {
+                entry.push_back(Pair("height", pindex->nHeight));
+                entry.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
+            } else {
+                LogPrintf("can't find block with hash %s\n", hashBlock.GetHex().c_str());
+                entry.push_back(Pair("confirmations", 0));
+            }
+        }
+
+        // check whether any confirmed transaction spends this output
+        if (txindex.vSpent[nOutput].IsNull()) {
+            // if not, check for an unconfirmed spend
+            validateoutputs_check_unconfirmed_spend(outpoint, tx, entry);
+            ret.push_back(entry);
+            continue;
+        }
+
+        entry.push_back(Pair("status", "spent"));
+
+        Object details;
+        CTransaction spending_tx;
+
+        // load the transaction that spends this output
+        spending_tx.ReadFromDisk(txindex.vSpent[nOutput]);
+
+        details.push_back(Pair("txid", spending_tx.GetHash().GetHex()));
+
+        // find this output's input number in the spending transaction
+        int n = 0;
+        BOOST_FOREACH(CTxIn input, spending_tx.vin) {
+            if (input.prevout == outpoint) {
+                details.push_back(Pair("vin", n));
+                break;
+            }
+            n++;
+        }
+
+        // get the spending transaction
+        if (GetTransaction(uint256(spending_tx.GetHash()), tx, hashBlock, txindex) && hashBlock != 0) {
+            map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
+            if (mi != mapBlockIndex.end() && (*mi).second)
+            {
+                CBlockIndex* pindex = (*mi).second;
+                if (pindex->IsInMainChain()) {
+                    details.push_back(Pair("height", pindex->nHeight));
+                    details.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
+                } else {
+                    LogPrintf("can't find block with hash %s\n", hashBlock.GetHex().c_str());
+                    details.push_back(Pair("confirmations", 0));
+                }
+            }
+        }
+
+        entry.push_back(Pair("spent", details));
+        ret.push_back(entry);
+    }
+
+    return ret;
+}
+
+
 Value validatepubkey(const Array& params, bool fHelp)
 {
     if (fHelp || !params.size() || params.size() > 2)
         throw runtime_error(
-            "validatepubkey <blackcoinpubkey>\n"
-            "Return information about <blackcoinpubkey>.");
+            "validatepubkey <Clampubkey>\n"
+            "Return information about <Clampubkey>.");
 
     std::vector<unsigned char> vchPubKey = ParseHex(params[0].get_str());
     CPubKey pubKey(vchPubKey);
@@ -186,7 +351,7 @@ Value verifymessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw runtime_error(
-            "verifymessage <blackcoinaddress> <signature> <message>\n"
+            "verifymessage <Clamaddress> <signature> <message>\n"
             "Verify a signed message");
 
     string strAddress  = params[0].get_str();

@@ -46,7 +46,7 @@ void RPCTypeCheck(const Array& params,
                   const list<Value_type>& typesExpected,
                   bool fAllowNull)
 {
-    uint i = 0;
+    unsigned int i = 0;
     BOOST_FOREACH(Value_type t, typesExpected)
     {
         if (params.size() <= i)
@@ -243,8 +243,10 @@ static const CRPCCommand vRPCCommands[] =
     { "getcheckpoint",          &getcheckpoint,          true,      false,     false },
     { "sendalert",              &sendalert,              false,     false,     false },
     { "validateaddress",        &validateaddress,        true,      false,     false },
+    { "validateoutputs",        &validateoutputs,        true,      false,     false },
     { "validatepubkey",         &validatepubkey,         true,      false,     false },
     { "verifymessage",          &verifymessage,          false,     false,     false },
+    { "dumpbootstrap",          &dumpbootstrap,          false,     false,     false },
 
 #ifdef ENABLE_WALLET
     { "getmininginfo",          &getmininginfo,          true,      false,     false },
@@ -256,6 +258,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getaccount",             &getaccount,             false,     false,     true },
     { "getaddressesbyaccount",  &getaddressesbyaccount,  true,      false,     true },
     { "sendtoaddress",          &sendtoaddress,          false,     false,     true },
+    { "getstakedbyaddress",     &getstakedbyaddress,     false,     false,     true },
     { "getreceivedbyaddress",   &getreceivedbyaddress,   false,     false,     true },
     { "getreceivedbyaccount",   &getreceivedbyaccount,   false,     false,     true },
     { "listreceivedbyaddress",  &listreceivedbyaddress,  false,     false,     true },
@@ -278,6 +281,7 @@ static const CRPCCommand vRPCCommands[] =
     { "signmessage",            &signmessage,            false,     false,     true },
     { "getwork",                &getwork,                true,      false,     true },
     { "getworkex",              &getworkex,              true,      false,     true },
+    { "listbalances",           &listbalances,           false,     false,     true },
     { "listaccounts",           &listaccounts,           false,     false,     true },
     { "getblocktemplate",       &getblocktemplate,       true,      false,     false },
     { "submitblock",            &submitblock,            false,     false,     false },
@@ -300,7 +304,7 @@ static const CRPCCommand vRPCCommands[] =
 
 CRPCTable::CRPCTable()
 {
-    uint vcidx;
+    unsigned int vcidx;
     for (vcidx = 0; vcidx < (sizeof(vRPCCommands) / sizeof(vRPCCommands[0])); vcidx++)
     {
         const CRPCCommand *pcmd;
@@ -702,7 +706,7 @@ static Object JSONRPCExecOne(const Value& req)
 static string JSONRPCExecBatch(const Array& vReq)
 {
     Array ret;
-    for (uint reqIdx = 0; reqIdx < vReq.size(); reqIdx++)
+    for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++)
         ret.push_back(JSONRPCExecOne(vReq[reqIdx]));
 
     return write_string(Value(ret), false) + "\n";
