@@ -1,6 +1,3 @@
-//d
-//
-
 #include <QApplication>
 
 #include "bitcoingui.h"
@@ -123,10 +120,47 @@ void DebugMessageHandler(QtMsgType type, const char * msg)
     LogPrint(category, "GUI: %s\n", msg);
 }
 #else
-void DebugMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString &msg)
+// TODO: use QFile output instead of LogPrint and use this instead of LogPrint
+const QString DEBUG_LOG_FILENAME = "debug.log";
+// The idea here is that everything prints to the debug log first, then std stream, both formatted the same
+// NOTE: QT_NO_DEBUG_OUTPUT will only supress QtDebugMsg
+void DebugMessageHandler( QtMsgType msgType, const QMessageLogContext &context, const QString &msg )
 {
-    const char *category = (type == QtDebugMsg) ? "qt" : NULL;
+    QString debugStr;
+    static QTextStream qstdout( stdout );
+
+    // Prepend the proper message type for our string depending on severity
+    switch ( msgType )
+    {
+        case QtDebugMsg: debugStr = "Debug: "; break;
+        case QtWarningMsg: debugStr = "Warning: "; break;
+        case QtCriticalMsg: debugStr = "CRITICAL: "; break; // QtSystemMsg == QtCriticalMsg. System messages will be critical
+        case QtFatalMsg: debugStr = "FATAL: ";
+    }
+
+    // Build our string so we can divert it anywhere
+    debugStr.append( QString( "%1 [%2:%3, %4]\n" )
+                        .arg( msg.toAscii().constData() )
+                        .arg( context.file )
+                        .arg( context.line )
+                        .arg( context.function )
+                     );
+
+    // Write to stream
+    qstdout << debugStr;
+    qstdout.flush();
+
+    const char *category = (msgType == QtDebugMsg) ? "qt" : NULL;
     LogPrint(category, "GUI: %s\n", msg.toStdString());
+
+    // Do whatever desired action, either ignore or abort()
+    switch ( msgType )
+    {
+        case QtDebugMsg: break;
+        case QtWarningMsg: break;
+        case QtCriticalMsg: break;
+        case QtFatalMsg: abort();
+    }
 }
 #endif
 
@@ -251,9 +285,6 @@ int main(int argc, char *argv[])
 
     try
     {
-        if (fUseClamTheme)
-            GUIUtil::SetClamThemeQSS(app);
-
         // Regenerate startup link, to fix links to old versions
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
