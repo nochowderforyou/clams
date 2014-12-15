@@ -1203,7 +1203,7 @@ void BitcoinGUI::updateStyle()
     QFile f( qssPath );
 
     if (!f.exists())
-        writeDefultStyleSheet( qssPath );
+        writeDefaultStyleSheet( qssPath );
 
     if (!f.open(QFile::ReadOnly))
     {
@@ -1215,7 +1215,7 @@ void BitcoinGUI::updateStyle()
     qApp->setStyleSheet( f.readAll() );
 }
 
-void BitcoinGUI::writeDefultStyleSheet(const QString &qssPath)
+void BitcoinGUI::writeDefaultStyleSheet(const QString &qssPath)
 {
     qDebug() << "writing default style sheet";
 
