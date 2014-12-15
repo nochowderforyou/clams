@@ -2,6 +2,7 @@ QToolTip
 {
      border: 1px solid black;
      background-color: rgb(41,54,67);
+     color: #f1f1f1;
      padding: 1px;
      border-radius: 3px;
      opacity: 100;
