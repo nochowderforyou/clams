@@ -8,6 +8,8 @@
 	<string>APPL</string>
 	<key>CFBundleGetInfoString</key>
 	<string>Clam-Qt</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@CLIENT_VERSION_MAJOR@.@CLIENT_VERSION_MINOR@</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleExecutable</key>

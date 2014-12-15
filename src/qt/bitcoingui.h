@@ -132,7 +132,7 @@ private:
     void toggleExportButton(bool toggle);
 
     void updateStyle();
-    void writeDefultStyleSheet(const QString &qssPath);
+    void writeDefaultStyleSheet(const QString &qssPath);
 
 public slots:
     // UI Ready notification
