@@ -217,7 +217,7 @@ BitcoinGUI::~BitcoinGUI()
     if(trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
         trayIcon->hide();
 #ifdef Q_OS_MAC
-    delete appMenuBar;
+    //delete appMenuBar;
 #endif
 }
 

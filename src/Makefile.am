@@ -57,6 +57,7 @@ BITCOIN_CORE_H = \
   chainparamsseeds.h \
   checkpoints.h \
   checkqueue.h \
+  clamspeech.h \
   clientversion.h \
   coincontrol.h \
   coins.h \
@@ -96,6 +97,7 @@ BITCOIN_CORE_H = \
   timedata.h \
   tinyformat.h \
   txdb.h \
+  txmempool.h \
   ui_interface.h \
   uint256.h \
   undo.h \
@@ -131,6 +133,7 @@ libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   alert.cpp \
   checkpoints.cpp \
+  clamspeech.cpp \
   init.cpp \
   kernel.cpp \
   main.cpp \
@@ -146,6 +149,7 @@ libbitcoin_server_a_SOURCES = \
   rpcserver.cpp \
   timedata.cpp \
   txdb-leveldb.cpp \
+  txmempool.cpp \
   version.cpp \
   $(JSON_H) \
   $(BITCOIN_CORE_H)
