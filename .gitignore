@@ -115,3 +115,8 @@ src/qt/moc_aboutdialog.cpp
 src/qt/moc_monitoreddatamapper.cpp
 src/qt/test/moc_uritests.cpp
 src/qt/test/test_bitcoin-qt
+src/qt/clam-qt.config
+src/qt/clam-qt.creator
+src/qt/clam-qt.creator.user
+src/qt/clam-qt.files
+src/qt/clam-qt.includes
