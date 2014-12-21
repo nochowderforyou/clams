@@ -83,6 +83,7 @@ QT_FORMS_UI = \
   qt/forms/editaddressdialog.ui \
   qt/forms/optionsdialog.ui \
   qt/forms/overviewpage.ui \
+  qt/forms/qrcodedialog.ui \
   qt/forms/rpcconsole.ui \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
@@ -160,6 +161,7 @@ BITCOIN_QT_H = \
   qt/optionsmodel.h \
   qt/overviewpage.h \
   qt/paymentserver.h \
+  qt/qrcodedialog.h \
   qt/qvalidatedlineedit.h \
   qt/qvaluecombobox.h \
   qt/rpcconsole.h \
@@ -236,6 +238,7 @@ BITCOIN_QT_CPP = \
   qt/optionsmodel.cpp \
   qt/qvalidatedlineedit.cpp \
   qt/qvaluecombobox.cpp \
+  qt/qrcodedialog.cpp \
   qt/rpcconsole.cpp \
   qt/trafficgraphwidget.cpp \
   qt/walletmodel.cpp

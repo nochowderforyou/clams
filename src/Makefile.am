@@ -133,7 +133,6 @@ libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   alert.cpp \
   checkpoints.cpp \
-  clamspeech.cpp \
   init.cpp \
   kernel.cpp \
   main.cpp \
@@ -187,6 +186,7 @@ libbitcoin_util_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_util_a_SOURCES = \
   rpcprotocol.cpp \
   sync.cpp \
+  clamspeech.cpp \
   util.cpp \
   $(BITCOIN_CORE_H)
 
