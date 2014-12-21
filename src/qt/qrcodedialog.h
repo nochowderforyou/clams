@@ -11,7 +11,8 @@ class OptionsModel;
 
 class QRCodeDialog : public QDialog
 {
-    Q_OBJECT
+//Commenting this out allows for compiling
+//    Q_OBJECT
 
 public:
     explicit QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent = 0);
