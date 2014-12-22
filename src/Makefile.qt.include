@@ -240,7 +240,6 @@ BITCOIN_QT_CPP = \
   qt/qrcodedialog.cpp \
   qt/qvalidatedlineedit.cpp \
   qt/qvaluecombobox.cpp \
-  qt/qrcodedialog.cpp \
   qt/rpcconsole.cpp \
   qt/trafficgraphwidget.cpp \
   qt/walletmodel.cpp
