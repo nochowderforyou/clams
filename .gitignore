@@ -120,3 +120,4 @@ src/qt/clam-qt.creator
 src/qt/clam-qt.creator.user
 src/qt/clam-qt.files
 src/qt/clam-qt.includes
+moc_qrcodedialog.cpp

@@ -6,7 +6,6 @@
 #include "optionsmodel.h"
 #include "guiutil.h"
 #include "guiconstants.h"
-#include "main.h" 
 #include "init.h"
 #include "util.h"
 #include "wallet.h"

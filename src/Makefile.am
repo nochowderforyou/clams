@@ -146,10 +146,10 @@ libbitcoin_server_a_SOURCES = \
   rpcnet.cpp \
   rpcrawtransaction.cpp \
   rpcserver.cpp \
+  script.cpp \
   timedata.cpp \
   txdb-leveldb.cpp \
   txmempool.cpp \
-  version.cpp \
   $(JSON_H) \
   $(BITCOIN_CORE_H)
 
@@ -176,7 +176,6 @@ libbitcoin_common_a_SOURCES = \
   keystore.cpp \
   netbase.cpp \
   protocol.cpp \
-  script.cpp \
   $(BITCOIN_CORE_H)
 
 # util: shared between all executables.
@@ -184,9 +183,10 @@ libbitcoin_common_a_SOURCES = \
 # backward-compatibility objects and their sanity checks are linked.
 libbitcoin_util_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_util_a_SOURCES = \
+  clamspeech.cpp \
   rpcprotocol.cpp \
   sync.cpp \
-  clamspeech.cpp \
+  version.cpp \
   util.cpp \
   $(BITCOIN_CORE_H)
 
