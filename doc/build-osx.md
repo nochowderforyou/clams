@@ -38,7 +38,7 @@ Instructions: Homebrew
 
 #### Install dependencies using Homebrew
 
-brew install autoconf automake libtool boost miniupnpc openssl pkg-config protobuf qt
+brew install autoconf automake libtool boost miniupnpc openssl pkg-config protobuf qt libqrencode
 
 #### Installing berkeley-db4 using Homebrew
 
@@ -46,7 +46,7 @@ The homebrew package for berkeley-db4 has been broken for some time.  It will in
 
 Running this command takes you into brew's interactive mode, which allows you to configure, make, and install by hand:
 ```
-$ brew install https://raw.github.com/mxcl/homebrew/master/Library/Formula/berkeley-db4.rb -–without-java 
+$ brew install https://raw.github.com/mxcl/homebrew/master/Library/Formula/berkeley-db4.rb -–without-java
 ```
 
 The rest of these commands are run inside brew interactive mode:
@@ -89,7 +89,7 @@ Use Qt Creator as IDE
 You can use Qt Creator as IDE, for debugging and for manipulating forms, etc.
 Download Qt Creator from http://www.qt.io/download/. Download the "community edition" and only install Qt Creator (uncheck the rest during the installation process).
 
-1. Make sure you installed everything through homebrew mentioned above 
+1. Make sure you installed everything through homebrew mentioned above
 2. Do a proper ./configure --with-gui=qt5 --enable-debug
 3. In Qt Creator do "New Project" -> Import Project -> Import Existing Project
 4. Enter "clam-qt" as project name, enter src/qt as location
