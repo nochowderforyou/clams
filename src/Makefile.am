@@ -49,21 +49,15 @@ BITCOIN_CORE_H = \
   addrman.h \
   alert.h \
   allocators.h \
-  amount.h \
   base58.h \
-  bloom.h \
-  chain.h \
   chainparams.h \
   chainparamsseeds.h \
   checkpoints.h \
-  checkqueue.h \
   clamspeech.h \
   clientversion.h \
   coincontrol.h \
-  coins.h \
   compat.h \
-  compressor.h \
-  core_io.h \
+  core.h \
   crypter.h \
   db.h \
   hash.h \
@@ -71,27 +65,19 @@ BITCOIN_CORE_H = \
   kernel.h \
   key.h \
   keystore.h \
-  leveldbwrapper.h \
-  limitedmap.h \
   main.h \
-  merkleblock.h \
   miner.h \
   mruset.h \
   netbase.h \
   net.h \
-  noui.h \
   pbkdf2.h \
-  pow.h \
   protocol.h \
-  pubkey.h \
-  random.h \
   rpcclient.h \
   rpcprotocol.h \
   rpcserver.h \
   script.h \
   scrypt.h \
   serialize.h \
-  streams.h \
   sync.h \
   threadsafety.h \
   timedata.h \
@@ -100,15 +86,10 @@ BITCOIN_CORE_H = \
   txmempool.h \
   ui_interface.h \
   uint256.h \
-  undo.h \
   util.h \
-  utilstrencodings.h \
-  utilmoneystr.h \
-  utiltime.h \
   version.h \
   wallet.h \
-  walletdb.h \
-  compat/sanity.h
+  walletdb.h 
 
 JSON_H = \
   json/json_spirit.h \
