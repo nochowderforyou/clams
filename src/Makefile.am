@@ -50,6 +50,7 @@ BITCOIN_CORE_H = \
   alert.h \
   allocators.h \
   base58.h \
+  bignum.h \
   chainparams.h \
   chainparamsseeds.h \
   checkpoints.h \
@@ -83,6 +84,7 @@ BITCOIN_CORE_H = \
   timedata.h \
   tinyformat.h \
   txdb.h \
+  txdb-leveldb.h \
   txmempool.h \
   ui_interface.h \
   uint256.h \
