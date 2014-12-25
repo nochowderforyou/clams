@@ -20,6 +20,7 @@
 // Copyright year (2009-this)
 // Todo: update this when changing our copyright comments in the source
 #define COPYRIGHT_YEAR 2013
+#define COPYRIGHT_STR "2013-" STRINGIZE(COPYRIGHT_YEAR) " The Clam Core Developers"
 
 #endif //HAVE_CONFIG_H
 
