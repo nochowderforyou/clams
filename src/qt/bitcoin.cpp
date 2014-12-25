@@ -15,24 +15,44 @@
 #include "macdockiconhandler.h"
 #endif
 
+#include <QApplication>
+#include <QDebug>
+#include <QLibraryInfo>
+#include <QLocale>
 #include <QMessageBox>
+#include <QSettings>
+#include <QThread>
 #include <QTextCodec>
 #include <QLocale>
 #include <QTimer>
 #include <QTranslator>
 #include <QSplashScreen>
-#include <QLibraryInfo>
 
-#if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
-#define _BITCOIN_QT_PLUGINS_INCLUDED
-#define __INSURE__
+
+#if defined(QT_STATICPLUGIN)
 #include <QtPlugin>
+#if QT_VERSION < 0x050000
 Q_IMPORT_PLUGIN(qcncodecs)
 Q_IMPORT_PLUGIN(qjpcodecs)
 Q_IMPORT_PLUGIN(qtwcodecs)
 Q_IMPORT_PLUGIN(qkrcodecs)
 Q_IMPORT_PLUGIN(qtaccessiblewidgets)
+#else
+Q_IMPORT_PLUGIN(AccessibleFactory)
+#if defined(QT_QPA_PLATFORM_XCB)
+Q_IMPORT_PLUGIN(QXcbIntegrationPlugin);
+#elif defined(QT_QPA_PLATFORM_WINDOWS)
+Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin);
+#elif defined(QT_QPA_PLATFORM_COCOA)
+Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin);
 #endif
+#endif
+#endif
+
+#if QT_VERSION < 0x050000
+#include <QTextCodec>
+#endif
+
 
 // Need a global reference for the notifications to find the GUI
 static BitcoinGUI *guiref;
@@ -113,54 +133,18 @@ static void handleRunawayException(std::exception *e)
 }
 
 /* qDebug() message handler --> debug.log */
-#if QT_VERSION < 0x052000
+#if QT_VERSION < 0x050000
 void DebugMessageHandler(QtMsgType type, const char * msg)
 {
     const char *category = (type == QtDebugMsg) ? "qt" : NULL;
     LogPrint(category, "GUI: %s\n", msg);
 }
 #else
-// TODO: use QFile output instead of LogPrint and use this instead of LogPrint
-const QString DEBUG_LOG_FILENAME = "debug.log";
-// The idea here is that everything prints to the debug log first, then std stream, both formatted the same
-// NOTE: QT_NO_DEBUG_OUTPUT will only supress QtDebugMsg
-void DebugMessageHandler( QtMsgType msgType, const QMessageLogContext &context, const QString &msg )
+void DebugMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString &msg)
 {
-    QString debugStr;
-    static QTextStream qstdout( stdout );
-
-    // Prepend the proper message type for our string depending on severity
-    switch ( msgType )
-    {
-        case QtDebugMsg: debugStr = "Debug: "; break;
-        case QtWarningMsg: debugStr = "Warning: "; break;
-        case QtCriticalMsg: debugStr = "CRITICAL: "; break; // QtSystemMsg == QtCriticalMsg. System messages will be critical
-        case QtFatalMsg: debugStr = "FATAL: ";
-    }
-
-    // Build our string so we can divert it anywhere
-    debugStr.append( QString( "%1 [%2:%3, %4]\n" )
-                        .arg( msg.toAscii().constData() )
-                        .arg( context.file )
-                        .arg( context.line )
-                        .arg( context.function )
-                     );
-
-    // Write to stream
-    qstdout << debugStr;
-    qstdout.flush();
-
-    const char *category = (msgType == QtDebugMsg) ? "qt" : NULL;
+    Q_UNUSED(context);
+    const char *category = (type == QtDebugMsg) ? "qt" : NULL;
     LogPrint(category, "GUI: %s\n", msg.toStdString());
-
-    // Do whatever desired action, either ignore or abort()
-    switch ( msgType )
-    {
-        case QtDebugMsg: break;
-        case QtWarningMsg: break;
-        case QtCriticalMsg: break;
-        case QtFatalMsg: abort();
-    }
 }
 #endif
 
