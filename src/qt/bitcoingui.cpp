@@ -980,7 +980,7 @@ void BitcoinGUI::encryptWallet()
 
 void BitcoinGUI::backupWallet()
 {
-    QString saveDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+    QString saveDir = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation).first();
     QString filename = QFileDialog::getSaveFileName(this, tr("Backup Wallet"), saveDir, tr("Wallet Data (*.dat)"));
     if(!filename.isEmpty()) {
         if(!walletModel->backupWallet(filename)) {
@@ -991,7 +991,7 @@ void BitcoinGUI::backupWallet()
 
 void BitcoinGUI::importWallet()
 {
-    QString workDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+    QString workDir = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation).first();
     QString filename = QFileDialog::getOpenFileName(this, tr("Import Wallet"), workDir, tr("Wallet Data (*.dat)"));
     QString passwd;
     QString rpcCmd;
