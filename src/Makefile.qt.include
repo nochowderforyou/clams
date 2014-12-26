@@ -289,7 +289,7 @@ qt_libbitcoinqt_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(BITCOIN_QT_INCLUDES) \
   $(QT_INCLUDES) $(QT_DBUS_INCLUDES) $(PROTOBUF_CFLAGS) $(QR_CFLAGS)
 
 qt_libbitcoinqt_a_SOURCES = $(BITCOIN_QT_CPP) $(BITCOIN_QT_H) $(QT_FORMS_UI) \
-  $(QT_QRC) $(QT_QRC_LOCALE) $(QT_TS) $(PROTOBUF_PROTO) $(RES_ICONS) $(RES_IMAGES) $(RES_MOVIES) $(RES_STYLESHEETS)
+  $(QT_QRC) $(QT_TS) $(PROTOBUF_PROTO) $(RES_ICONS) $(RES_IMAGES) $(RES_MOVIES) $(RES_STYLESHEETS)
 
 nodist_qt_libbitcoinqt_a_SOURCES = $(QT_MOC_CPP) $(QT_MOC) $(PROTOBUF_CC) \
   $(PROTOBUF_H) $(QT_QRC_CPP)
@@ -352,7 +352,7 @@ CLEANFILES += $(CLEAN_QT)
 clam_qt_clean: FORCE
 	rm -f $(CLEAN_QT) $(qt_libbitcoinqt_a_OBJECTS) $(qt_clam_qt_OBJECTS) qt/clam-qt$(EXEEXT) $(LIBBITCOINQT)
 
-bitcoin_qt : qt/clam-qt$(EXEEXT)
+clam_qt : qt/clam-qt$(EXEEXT)
 
 ui_%.h: %.ui
 	@test -f $(UIC)
