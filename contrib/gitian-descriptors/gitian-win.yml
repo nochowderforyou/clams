@@ -76,14 +76,14 @@ script: |
   ./autogen.sh
   ./configure --prefix=${BASEPREFIX}/`echo "${HOSTS}" | awk '{print $1;}'`
   make dist
-  SOURCEDIST=`echo clams-*.tar.gz`
+  SOURCEDIST=`echo clam-*.tar.gz`
   DISTNAME=`echo ${SOURCEDIST} | sed 's/.tar.*//'`
 
   # Correct tar file order
   mkdir -p temp
   pushd temp
   tar xf ../$SOURCEDIST
-  find clams-* | sort | tar --no-recursion -c -T - | gzip -9n > ../$SOURCEDIST
+  find clam-* | sort | tar --no-recursion -c -T - | gzip -9n > ../$SOURCEDIST
   popd
 
   ORIGPATH="$PATH"
@@ -100,9 +100,10 @@ script: |
     make ${MAKEOPTS}
     make deploy
     make install-strip
-    cp -f clams-*setup*.exe $OUTDIR/
+    cp -f clam-*setup*.exe $OUTDIR/
     cd installed
-    mv ${DISTNAME}/bin/*.dll ${DISTNAME}/lib/
+    find . -name "*.dll"
+    #mv ${DISTNAME}/bin/*.dll ${DISTNAME}/lib/
     find . -name "lib*.la" -delete
     find . -name "lib*.a" -delete
     rm -rf ${DISTNAME}/lib/pkgconfig
