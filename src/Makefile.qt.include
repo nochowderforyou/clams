@@ -185,6 +185,7 @@ RES_ICONS = \
   qt/res/icons/clam.png \
   qt/res/icons/clam.ico \
   qt/res/icons/clam-16.png \
+  qt/res/icons/clam-80.png \
   qt/res/icons/clam_testnet.png \
   qt/res/icons/clock1.png \
   qt/res/icons/clock2.png \
