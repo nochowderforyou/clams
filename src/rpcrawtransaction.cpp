@@ -423,6 +423,9 @@ Value signrawtransaction(const Array& params, bool fHelp)
 
     // Fetch previous transactions (inputs):
     map<COutPoint, CScript> mapPrevOut;
+
+    // list of pay-to-script-hash hashes in the inputs
+    vector<CScript> p2shScripts;
     for (unsigned int i = 0; i < mergedTx.vin.size(); i++)
     {
         CTransaction tempTx;
@@ -440,7 +443,11 @@ Value signrawtransaction(const Array& params, bool fHelp)
         {
             const uint256& prevHash = txin.prevout.hash;
             if (mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.vout.size()>txin.prevout.n)
+            {
                 mapPrevOut[txin.prevout] = mapPrevTx[prevHash].second.vout[txin.prevout.n].scriptPubKey;
+                if (mapPrevOut[txin.prevout].IsPayToScriptHash())
+                    p2shScripts.push_back(mapPrevOut[txin.prevout]);
+            }
         }
     }
 
@@ -469,6 +476,19 @@ Value signrawtransaction(const Array& params, bool fHelp)
 #ifdef ENABLE_WALLET
     else
         EnsureWalletIsUnlocked();
+
+    // copy any p2sh scripts we need from the main wallet
+    if (fGivenKeys && pwalletMain) {
+        BOOST_FOREACH(CScript& s, p2shScripts)
+        {
+            txnouttype t;
+            vector<vector<unsigned char> > solutions;
+            CScript script;
+
+            if (Solver(s, t, solutions) && pwalletMain->GetCScript(uint160(solutions[0]), script))
+                tempKeystore.AddCScript(script);
+        }
+    }
 #endif
 
     // Add previous txouts given in the RPC call:
