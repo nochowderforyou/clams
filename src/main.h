@@ -28,6 +28,7 @@ class CReserveKey;
 class CWallet;
 
 static const int LAST_POW_BLOCK = 10000;
+static const int LAST_TESTNET_POW_BLOCK = 300;
 
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
 static const unsigned int MAX_BLOCK_SIZE = 1000000;
@@ -60,13 +61,13 @@ static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20
 static const unsigned int MAX_TX_COMMENT_LEN = 140; // 128 bytes + little extra
 
 static const uint256 hashGenesisBlock("0x00000c3ce6b3d823a35224a39798eca9ad889966aeb5a9da7b960ffb9869db35");
-static const uint256 hashGenesisBlockTestNet("0x0000135b14723652fecaeb07a52cebf3f69512594eae48d139956bca67552441");
+static const uint256 hashGenesisBlockTestNet("0x00001924120e93f445dd4adb9d90e0020350b8c6c2b08e1a4950372a37f8bcc8");
 
 static const uint256 hashHighBlock ("0xdb61f591d7fb40afa08476d6492e81a06edddf332d7027968ac130db95c07cb7");
 static const int HIGH_BLOCK_INDEX = 275000;
 
 
-inline bool IsProtocolV2(int nHeight) { return nHeight > 203500; }
+inline bool IsProtocolV2(int nHeight) { return TestNet() || nHeight > 203500; }
 
 inline int64_t PastDrift(int64_t nTime, int nHeight)   { return IsProtocolV2(nHeight) ? nTime      : nTime - 10 * 60; }
 
