@@ -993,12 +993,22 @@ int generateMTRandom(unsigned int s, int range)
 // miner's coin base reward
 int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 {
-    int64_t nSubsidy = 2.15652173 * COIN;
-    if (nHeight < 4551  ) {
-      nSubsidy = 3284 * COIN;
-    } else if (nHeight < 9551) {
+    int64_t nSubsidy;
+    if(TestNet()) {
+        if(nHeight < 300) {
+            nSubsidy = 5000 * COIN;
+        } else {
+            nSubsidy = 1 * COIN;
+        } 
+    } else {
         nSubsidy = 2.15652173 * COIN;
-   }
+        if (nHeight < 4551  ) {
+          nSubsidy = 3284 * COIN;
+        } else if (nHeight < 9551) {
+            nSubsidy = 2.15652173 * COIN;
+       }
+    }
+
 
     LogPrint("creation", "GetProofOfWorkReward() : create=%s nSubsidy=%d\n", FormatMoney(nSubsidy), nSubsidy);
 
@@ -1010,13 +1020,13 @@ const int LOTTERY_END = 170000;
 // miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(const CBlockIndex* pindex, int64_t nCoinAge, int64_t nFees )
 {
-    if(pindex->nHeight < LOTTERY_START){
+    if(pindex->nHeight < LOTTERY_START && !TestNet()){
 
         int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8);
 
         return nSubsidy + nFees;
 
-    } else if (pindex->nHeight > LOTTERY_END) {
+    } else if (pindex->nHeight > LOTTERY_END || TestNet()) {
 
         int64_t nSubsidy = 1 * COIN;
         return nSubsidy + nFees;
@@ -1235,7 +1245,7 @@ static unsigned int GetNextTargetRequiredV3(const CBlockIndex* pindexLast, bool 
  
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
-    if (pindexLast->nHeight < DISTRIBUTION_END)
+    if (pindexLast->nHeight < DISTRIBUTION_END && !TestNet())
         return GetNextTargetRequiredV1(pindexLast, fProofOfStake);
     else if (!IsProtocolV2(pindexLast->nHeight))
         return GetNextTargetRequiredV2(pindexLast, fProofOfStake);
@@ -2300,7 +2310,7 @@ bool CBlock::AcceptBlock()
     else if (!IsProtocolV2(nHeight) && nVersion > 6)
         return DoS(100, error("AcceptBlock() : reject too new nVersion = %d at height=%d", nVersion, nHeight));
 
-    if (IsProofOfWork() && nHeight > LAST_POW_BLOCK)
+    if ((IsProofOfWork() && nHeight > LAST_POW_BLOCK && !TestNet()) || ( IsProofOfWork() && nHeight > LAST_TESTNET_POW_BLOCK && TestNet()))
         return DoS(100, error("AcceptBlock() : reject proof-of-work at height %d", nHeight));
 
     // Check coinstake timestamp
@@ -2731,7 +2741,7 @@ bool LoadBlockIndex(bool fAllowNew, bool fReindex)
 
     if (TestNet())
     {
-        nStakeMinAge = 1 * 60 * 60; // test net min age is 1 hour
+        nStakeMinAge = 1 * 30 * 60; // test net min age is 30 minutes
         nCoinbaseMaturity = 10; // test maturity is 10 blocks
     }
    

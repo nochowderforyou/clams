@@ -134,15 +134,17 @@ public:
         pchMessageStart[3] = 0xdf;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 16);
         vAlertPubKey = ParseHex("0471dc165db490094d35cde15b1f5d755fa6ad6f2b5ed0f340e3f17f57389c3c2af113a8cbcc885bde73305a553b5640c83021128008ddf882e856336269080496");
-        nDefaultPort = 25714;
-        nRPCPort = 25715;
+        nDefaultPort = 35714;
+        nRPCPort = 35715;
         strDataDir = "testnet";
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nBits  = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce = 1279100;
+	genesis.nTime = 1397512438;
+        genesis.nNonce = 15165;
+	
         hashGenesisBlock = genesis.GetHash();
-        assert(hashGenesisBlock == uint256("0x0000135b14723652fecaeb07a52cebf3f69512594eae48d139956bca67552441"));
+        assert(hashGenesisBlock == uint256("0x00001924120e93f445dd4adb9d90e0020350b8c6c2b08e1a4950372a37f8bcc8"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
