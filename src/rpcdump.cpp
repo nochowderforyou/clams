@@ -14,7 +14,8 @@
 #include <boost/variant/get.hpp>
 #include <boost/algorithm/string.hpp>
 
-using namespace json_spirit;
+#include "univalue.h"
+
 using namespace std;
 
 void EnsureWalletIsUnlocked();
@@ -105,7 +106,7 @@ public:
     }
 };
 
-Value importprivkey(const Array& params, bool fHelp)
+UniValue importprivkey(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
@@ -141,7 +142,7 @@ Value importprivkey(const Array& params, bool fHelp)
 
         // Don't throw error in case a key is already there
         if (pwalletMain->HaveKey(vchAddress))
-            return Value::null;
+            return NullUniValue;
 
         pwalletMain->mapKeyMetadata[vchAddress].nCreateTime = 1;
 
@@ -157,10 +158,10 @@ Value importprivkey(const Array& params, bool fHelp)
         }
     }
 
-    return Value::null;
+    return NullUniValue;
 }
 
-Value deleteprivkey(const Array& params, bool fHelp)
+UniValue deleteprivkey(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -196,10 +197,10 @@ Value deleteprivkey(const Array& params, bool fHelp)
         pwalletMain->TidyWalletTransactions();
     }
 
-    return Value::null;
+    return NullUniValue;
 }
 
-Value importwalletdump(const Array& params, bool fHelp)
+UniValue importwalletdump(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -279,11 +280,11 @@ Value importwalletdump(const Array& params, bool fHelp)
     if (!fGood)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error adding some keys to wallet");
 
-    return Value::null;
+    return NullUniValue;
 }
 
 
-Value dumpprivkey(const Array& params, bool fHelp)
+UniValue dumpprivkey(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -307,7 +308,7 @@ Value dumpprivkey(const Array& params, bool fHelp)
     return CBitcoinSecret(vchSecret).ToString();
 }
 
-Value dumpwallet(const Array& params, bool fHelp)
+UniValue dumpwallet(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -362,10 +363,10 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << "\n";
     file << "# End of dump\n";
     file.close();
-    return Value::null;
+    return NullUniValue;
 }
 
-Value importwallet(const Array& params, bool fHelp)
+UniValue importwallet(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
@@ -488,5 +489,5 @@ Value importwallet(const Array& params, bool fHelp)
     else
         LogPrintf("Not rescanning because no new keys were imported\n");
 
-    return Value::null;
+    return NullUniValue;
 }

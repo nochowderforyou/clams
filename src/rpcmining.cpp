@@ -12,10 +12,9 @@
 #include "miner.h"
 
 #include <boost/assign/list_of.hpp>
+#include "univalue.h"
 
-using namespace json_spirit;
 using namespace std;
-
 using namespace boost::assign;
 
 // Key used by getwork/getblocktemplate miners.
@@ -39,7 +38,7 @@ void ShutdownRPCMining()
     delete pMiningKey; pMiningKey = NULL;
 }
 
-Value getsubsidy(const Array& params, bool fHelp)
+UniValue getsubsidy(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw runtime_error(
@@ -54,7 +53,7 @@ Value getsubsidy(const Array& params, bool fHelp)
     return (uint64_t)GetProofOfWorkReward(pindexBest->nHeight+1,0);
 }
 
-Value getmininginfo(const Array& params, bool fHelp)
+UniValue getmininginfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -65,7 +64,9 @@ Value getmininginfo(const Array& params, bool fHelp)
     if (pwalletMain)
     	pwalletMain->GetStakeWeight(nWeight);
 
-    Object obj, diff, weight;
+    UniValue obj(UniValue::VOBJ);
+    UniValue diff(UniValue::VOBJ);
+    UniValue weight(UniValue::VOBJ);
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
@@ -91,7 +92,7 @@ Value getmininginfo(const Array& params, bool fHelp)
     return obj;
 }
 
-Value getstakinginfo(const Array& params, bool fHelp)
+UniValue getstakinginfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -107,8 +108,8 @@ Value getstakinginfo(const Array& params, bool fHelp)
     if (staking)
         pwalletMain->GetExpectedStakeTime(nExpectedTime);
 
-    Object obj;
 
+    UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("enabled", GetBoolArg("-staking", true)));
     obj.push_back(Pair("staking", staking));
     obj.push_back(Pair("errors", GetWarnings("statusbar")));
@@ -128,7 +129,7 @@ Value getstakinginfo(const Array& params, bool fHelp)
     return obj;
 }
 
-Value getworkex(const Array& params, bool fHelp)
+UniValue getworkex(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
         throw runtime_error(
@@ -200,7 +201,7 @@ Value getworkex(const Array& params, bool fHelp)
         CTransaction coinbaseTx = pblock->vtx[0];
         std::vector<uint256> merkle = pblock->GetMerkleBranch(0);
 
-        Object result;
+        UniValue result(UniValue::VOBJ);
         result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
         result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
 
@@ -208,7 +209,7 @@ Value getworkex(const Array& params, bool fHelp)
         ssTx << coinbaseTx;
         result.push_back(Pair("coinbase", HexStr(ssTx.begin(), ssTx.end())));
 
-        Array merkle_arr;
+        UniValue merkle_arr(UniValue::VARR);
 
         BOOST_FOREACH(uint256 merkleh, merkle) {
             merkle_arr.push_back(HexStr(BEGIN(merkleh), END(merkleh)));
@@ -258,7 +259,7 @@ Value getworkex(const Array& params, bool fHelp)
 }
 
 
-Value getwork(const Array& params, bool fHelp)
+UniValue getwork(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw runtime_error(
@@ -339,7 +340,7 @@ Value getwork(const Array& params, bool fHelp)
 
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-        Object result;
+        UniValue result(UniValue::VOBJ);
         result.push_back(Pair("midstate", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
         result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
         result.push_back(Pair("hash1",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated
@@ -374,7 +375,7 @@ Value getwork(const Array& params, bool fHelp)
 }
 
 
-Value getblocktemplate(const Array& params, bool fHelp)
+UniValue getblocktemplate(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw runtime_error(
@@ -397,13 +398,14 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
+    UniValue lpval = NullUniValue;
     if (params.size() > 0)
     {
-        const Object& oparam = params[0].get_obj();
-        const Value& modeval = find_value(oparam, "mode");
-        if (modeval.type() == str_type)
+        const UniValue& oparam = params[0].get_obj();
+        const UniValue& modeval = find_value(oparam, "mode");
+        if (modeval.isStr())
             strMode = modeval.get_str();
-        else if (modeval.type() == null_type)
+        else if (modeval.isNull())
         {
             /* Do nothing */
         }
@@ -457,7 +459,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     pblock->UpdateTime(pindexPrev);
     pblock->nNonce = 0;
 
-    Array transactions;
+    UniValue transactions(UniValue::VARR);
     map<uint256, int64_t> setTxIndex;
     int i = 0;
     CTxDB txdb("r");
@@ -469,7 +471,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if (tx.IsCoinBase() || tx.IsCoinStake())
             continue;
 
-        Object entry;
+        UniValue entry(UniValue::VOBJ);
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
         ssTx << tx;
@@ -484,7 +486,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         {
             entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
 
-            Array deps;
+            UniValue deps(UniValue::VARR);
             BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)
             {
                 if (setTxIndex.count(inp.first))
@@ -500,12 +502,12 @@ Value getblocktemplate(const Array& params, bool fHelp)
         transactions.push_back(entry);
     }
 
-    Object aux;
+    UniValue aux(UniValue::VOBJ);
     aux.push_back(Pair("flags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
 
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-    static Array aMutable;
+    static UniValue aMutable(UniValue::VARR);
     if (aMutable.empty())
     {
         aMutable.push_back("time");
@@ -513,7 +515,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         aMutable.push_back("prevblock");
     }
 
-    Object result;
+    UniValue result(UniValue::VOBJ);
     result.push_back(Pair("version", pblock->nVersion));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
@@ -532,7 +534,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     return result;
 }
 
-Value submitblock(const Array& params, bool fHelp)
+UniValue submitblock(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
@@ -555,6 +557,6 @@ Value submitblock(const Array& params, bool fHelp)
     if (!fAccepted)
         return "rejected";
 
-    return Value::null;
+    return NullUniValue;
 }
 
