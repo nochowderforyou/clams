@@ -8,10 +8,11 @@
 #include "kernel.h"
 #include "checkpoints.h"
 
-using namespace json_spirit;
+#include <univalue.h>
+
 using namespace std;
 
-extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
+extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 extern enum Checkpoints::CPMode CheckpointsMode;
 
 double GetDifficulty(const CBlockIndex* blockindex)
@@ -106,9 +107,9 @@ double GetPoSKernelPS()
     return result;
 }
 
-Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPrintTransactionDetail)
+UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPrintTransactionDetail)
 {
-    Object result;
+    UniValue result(UniValue::VOBJ);
     result.push_back(Pair("hash", block.GetHash().GetHex()));
     int confirmations = -1;
     // Only report confirmations if the block is on the main chain
@@ -139,12 +140,12 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
     result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
     result.push_back(Pair("modifier", strprintf("%016x", blockindex->nStakeModifier)));
-    Array txinfo;
+    UniValue txinfo(UniValue::VARR);
     BOOST_FOREACH (const CTransaction& tx, block.vtx)
     {
         if (fPrintTransactionDetail)
         {
-            Object entry;
+            UniValue entry(UniValue::VOBJ);
 
             entry.push_back(Pair("txid", tx.GetHash().GetHex()));
             TxToJSON(tx, 0, entry);
@@ -163,7 +164,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     return result;
 }
 
-Value getbestblockhash(const Array& params, bool fHelp)
+UniValue getbestblockhash(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -173,7 +174,7 @@ Value getbestblockhash(const Array& params, bool fHelp)
     return hashBestChain.GetHex();
 }
 
-Value dumpbootstrap(const Array& params, bool fHelp)
+UniValue dumpbootstrap(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 3)
         throw runtime_error(
@@ -215,10 +216,10 @@ Value dumpbootstrap(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_MISC_ERROR, "Error: Bootstrap dump failed!");
     }
 
-    return Value::null;
+    return NullUniValue;
 }
 
-Value getblockcount(const Array& params, bool fHelp)
+UniValue getblockcount(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -229,21 +230,21 @@ Value getblockcount(const Array& params, bool fHelp)
 }
 
 
-Value getdifficulty(const Array& params, bool fHelp)
+UniValue getdifficulty(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
             "getdifficulty\n"
             "Returns the difficulty as a multiple of the minimum difficulty.");
 
-    Object obj;
+    UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("proof-of-work",        GetDifficulty()));
     obj.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     return obj;
 }
 
 
-Value getrawmempool(const Array& params, bool fHelp)
+UniValue getrawmempool(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -253,14 +254,14 @@ Value getrawmempool(const Array& params, bool fHelp)
     vector<uint256> vtxid;
     mempool.queryHashes(vtxid);
 
-    Array a;
+    UniValue a(UniValue::VARR);
     BOOST_FOREACH(const uint256& hash, vtxid)
         a.push_back(hash.ToString());
 
     return a;
 }
 
-Value getblockhash(const Array& params, bool fHelp)
+UniValue getblockhash(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -275,7 +276,7 @@ Value getblockhash(const Array& params, bool fHelp)
     return pblockindex->phashBlock->GetHex();
 }
 
-Value getblock(const Array& params, bool fHelp)
+UniValue getblock(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
@@ -327,7 +328,7 @@ Value getblock(const Array& params, bool fHelp)
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
 }
 
-Value getblockbynumber(const Array& params, bool fHelp)
+UniValue getblockbynumber(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
@@ -361,14 +362,14 @@ Value getblockbynumber(const Array& params, bool fHelp)
 }
 
 // ppcoin: get information of sync-checkpoint
-Value getcheckpoint(const Array& params, bool fHelp)
+UniValue getcheckpoint(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
             "getcheckpoint\n"
             "Show info of synchronized checkpoint.\n");
 
-    Object result;
+    UniValue result(UniValue::VOBJ);
     CBlockIndex* pindexCheckpoint;
 
     result.push_back(Pair("synccheckpoint", Checkpoints::hashSyncCheckpoint.ToString().c_str()));

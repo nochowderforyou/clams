@@ -14,12 +14,11 @@
 #include "util.h"
 
 #include <boost/foreach.hpp>
-#include "json/json_spirit_value.h"
+#include "univalue.h"
 
-using namespace json_spirit;
 using namespace std;
 
-Value getconnectioncount(const Array& params, bool fHelp)
+UniValue getconnectioncount(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -30,7 +29,7 @@ Value getconnectioncount(const Array& params, bool fHelp)
     return (int)vNodes.size();
 }
 
-Value ping(const Array& params, bool fHelp)
+UniValue ping(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -45,7 +44,7 @@ Value ping(const Array& params, bool fHelp)
         pNode->fPingQueued = true;
     }
 
-    return Value::null;
+    return NullUniValue;
 }
 
 static void CopyNodeStats(std::vector<CNodeStats>& vstats)
@@ -61,7 +60,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
     }
 }
 
-Value getpeerinfo(const Array& params, bool fHelp)
+UniValue getpeerinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -71,10 +70,10 @@ Value getpeerinfo(const Array& params, bool fHelp)
     vector<CNodeStats> vstats;
     CopyNodeStats(vstats);
 
-    Array ret;
+    UniValue ret(UniValue::VARR);
 
     BOOST_FOREACH(const CNodeStats& stats, vstats) {
-        Object obj;
+        UniValue obj(UniValue::VOBJ);
 
         obj.push_back(Pair("addr", stats.addrName));
         if (!(stats.addrLocal.empty()))
@@ -102,7 +101,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
     return ret;
 }
 
-Value addnode(const Array& params, bool fHelp)
+UniValue addnode(const UniValue& params, bool fHelp)
 {
     string strCommand;
     if (params.size() == 2)
@@ -119,7 +118,7 @@ Value addnode(const Array& params, bool fHelp)
     {
         CAddress addr;
         ConnectNode(addr, strNode.c_str());
-        return Value::null;
+        return NullUniValue;
     }
 
     LOCK(cs_vAddedNodes);
@@ -141,10 +140,10 @@ Value addnode(const Array& params, bool fHelp)
         vAddedNodes.erase(it);
     }
 
-    return Value::null;
+    return NullUniValue;
 }
 
-Value getaddednodeinfo(const Array& params, bool fHelp)
+UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
@@ -179,13 +178,13 @@ Value getaddednodeinfo(const Array& params, bool fHelp)
 
     if (!fDns)
     {
-        Object ret;
+        UniValue ret(UniValue::VARR);
         BOOST_FOREACH(string& strAddNode, laddedNodes)
             ret.push_back(Pair("addednode", strAddNode));
         return ret;
     }
 
-    Array ret;
+    UniValue ret(UniValue::VARR);
 
     list<pair<string, vector<CService> > > laddedAddreses(0);
     BOOST_FOREACH(string& strAddNode, laddedNodes)
@@ -195,10 +194,10 @@ Value getaddednodeinfo(const Array& params, bool fHelp)
             laddedAddreses.push_back(make_pair(strAddNode, vservNode));
         else
         {
-            Object obj;
+            UniValue obj(UniValue::VOBJ);
             obj.push_back(Pair("addednode", strAddNode));
             obj.push_back(Pair("connected", false));
-            Array addresses;
+            UniValue addresses(UniValue::VARR);
             obj.push_back(Pair("addresses", addresses));
         }
     }
@@ -206,15 +205,15 @@ Value getaddednodeinfo(const Array& params, bool fHelp)
     LOCK(cs_vNodes);
     for (list<pair<string, vector<CService> > >::iterator it = laddedAddreses.begin(); it != laddedAddreses.end(); it++)
     {
-        Object obj;
+        UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("addednode", it->first));
 
-        Array addresses;
+        UniValue addresses(UniValue::VARR);
         bool fConnected = false;
         BOOST_FOREACH(CService& addrNode, it->second)
         {
             bool fFound = false;
-            Object node;
+            UniValue node(UniValue::VOBJ);
             node.push_back(Pair("address", addrNode.ToString()));
             BOOST_FOREACH(CNode* pnode, vNodes)
                 if (pnode->addr == addrNode)
@@ -240,7 +239,7 @@ Value getaddednodeinfo(const Array& params, bool fHelp)
 // There is a known deadlock situation with ThreadMessageHandler
 // ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()
 // ThreadRPCServer: holds cs_main and acquiring cs_vSend in alert.RelayTo()/PushMessage()/BeginMessage()
-Value sendalert(const Array& params, bool fHelp)
+UniValue sendalert(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 6)
         throw runtime_error(
@@ -287,7 +286,7 @@ Value sendalert(const Array& params, bool fHelp)
             alert.RelayTo(pnode);
     }
 
-    Object result;
+    UniValue result(UniValue::VOBJ);
     result.push_back(Pair("strStatusBar", alert.strStatusBar));
     result.push_back(Pair("nVersion", alert.nVersion));
     result.push_back(Pair("nMinVer", alert.nMinVer));
@@ -299,7 +298,7 @@ Value sendalert(const Array& params, bool fHelp)
     return result;
 }
 
-Value getnettotals(const Array& params, bool fHelp)
+UniValue getnettotals(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
         throw runtime_error(
@@ -307,7 +306,7 @@ Value getnettotals(const Array& params, bool fHelp)
             "Returns information about network traffic, including bytes in, bytes out,\n"
             "and current time.");
 
-    Object obj;
+    UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("totalbytesrecv", CNode::GetTotalBytesRecv()));
     obj.push_back(Pair("totalbytessent", CNode::GetTotalBytesSent()));
     obj.push_back(Pair("timemillis", GetTimeMillis()));

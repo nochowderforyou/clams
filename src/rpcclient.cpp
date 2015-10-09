@@ -13,24 +13,16 @@
 
 #include <stdint.h>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include <boost/bind.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
-#include <boost/iostreams/concepts.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/shared_ptr.hpp>
-#include "json/json_spirit_writer_template.h"
+#include <boost/algorithm/string/case_conv.hpp> 
+#include <univalue.h>
 
 using namespace std;
 using namespace boost;
 using namespace boost::asio;
-using namespace json_spirit;
 
-Object CallRPC(const string& strMethod, const Array& params)
+UniValue CallRPC(const string& strMethod, const UniValue& params)
 {
     if (mapArgs["-rpcuser"] == "" && mapArgs["-rpcpassword"] == "")
         throw runtime_error(strprintf(
@@ -84,10 +76,10 @@ Object CallRPC(const string& strMethod, const Array& params)
         throw runtime_error("no response from server");
 
     // Parse reply
-    Value valReply;
-    if (!read_string(strReply, valReply))
+    UniValue valReply(UniValue::VSTR);
+    if (!valReply.read(strReply))
         throw runtime_error("couldn't parse reply from server");
-    const Object& reply = valReply.get_obj();
+    const UniValue& reply = valReply.get_obj();
     if (reply.empty())
         throw runtime_error("expected reply to have result, error and id properties");
 
@@ -189,10 +181,22 @@ CRPCConvertTable::CRPCConvertTable()
 
 static CRPCConvertTable rpcCvtTable;
 
-// Convert strings to command-specific RPC representation
-Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
+/** Non-RFC4627 JSON parser, accepts internal values (such as numbers, true, false, null)
+ * as well as objects and arrays.
+ */
+UniValue ParseNonRFCJSONValue(const std::string& strVal)
 {
-    Array params;
+    UniValue jVal;
+    if (!jVal.read(std::string("[")+strVal+std::string("]")) ||
+        !jVal.isArray() || jVal.size()!=1)
+        throw runtime_error(string("Error parsing JSON:")+strVal);
+    return jVal[0];
+}
+
+// Convert strings to command-specific RPC representation
+UniValue RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
+{
+    UniValue params(UniValue::VARR);
 
     for (unsigned int idx = 0; idx < strParams.size(); idx++) {
         const std::string& strVal = strParams[idx];
@@ -200,14 +204,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
         // insert string value directly
         if (!rpcCvtTable.convert(strMethod, idx)) {
             params.push_back(strVal);
-        }
-
-        // parse string as JSON, insert bool/number/object/etc. value
-        else {
-            Value jVal;
-            if (!read_string(strVal, jVal))
-                throw runtime_error(string("Error parsing JSON:")+strVal);
-            params.push_back(jVal);
+        } else {
+            // parse string as JSON, insert bool/number/object/etc. value
+            params.push_back(ParseNonRFCJSONValue(strVal));
         }
 
     }
@@ -235,31 +234,40 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
-        Array params = RPCConvertValues(strMethod, strParams);
+        UniValue params = RPCConvertValues(strMethod, strParams);
 
         // Execute
-        Object reply = CallRPC(strMethod, params);
+        const UniValue reply = CallRPC(strMethod, params);
 
         // Parse reply
-        const Value& result = find_value(reply, "result");
-        const Value& error  = find_value(reply, "error");
+        const UniValue& result = find_value(reply, "result");
+        const UniValue& error  = find_value(reply, "error");
 
-        if (error.type() != null_type)
+       if (!error.isNull()) 
         {
             // Error
-            strPrint = "error: " + write_string(error, false);
-            int code = find_value(error.get_obj(), "code").get_int();
+            int code = error["code"].get_int();
+            strPrint = "error: " + error.write();
             nRet = abs(code);
+            if (error.isObject())
+            {
+                UniValue errCode = find_value(error, "code");
+                UniValue errMsg  = find_value(error, "message");
+                strPrint = errCode.isNull() ? "" : "error code: "+errCode.getValStr()+"\n";
+
+                if (errMsg.isStr())
+                    strPrint += "error message: "+errMsg.get_str()+"\n";
+            }
         }
         else
         {
             // Result
-            if (result.type() == null_type)
+            if (result.isNull())
                 strPrint = "";
-            else if (result.type() == str_type)
+            else if (result.isStr())
                 strPrint = result.get_str();
             else
-                strPrint = write_string(result, true);
+                strPrint = result.write(2);
         }
     }
     catch (boost::thread_interrupted) {

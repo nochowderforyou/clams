@@ -20,15 +20,13 @@
 #include <stdint.h>
 
 #include <boost/assign/list_of.hpp>
-#include "json/json_spirit_utils.h"
-#include "json/json_spirit_value.h"
+#include <univalue.h>
 
 using namespace std;
 using namespace boost;
 using namespace boost::assign;
-using namespace json_spirit;
 
-Value getinfo(const Array& params, bool fHelp)
+UniValue getinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
@@ -38,7 +36,8 @@ Value getinfo(const Array& params, bool fHelp)
     proxyType proxy;
     GetProxy(NET_IPV4, proxy);
 
-    Object obj, diff;
+    UniValue obj(UniValue::VOBJ);
+    UniValue diff(UniValue::VOBJ);
     obj.push_back(Pair("version",       FormatFullVersion()));
     obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
 #ifdef ENABLE_WALLET
@@ -78,13 +77,13 @@ Value getinfo(const Array& params, bool fHelp)
 }
 
 #ifdef ENABLE_WALLET
-class DescribeAddressVisitor : public boost::static_visitor<Object>
+class DescribeAddressVisitor : public boost::static_visitor<UniValue>
 {
 public:
-    Object operator()(const CNoDestination &dest) const { return Object(); }
+    UniValue operator()(const CNoDestination &dest) const { return UniValue(); }
 
-    Object operator()(const CKeyID &keyID) const {
-        Object obj;
+    UniValue operator()(const CKeyID &keyID) const {
+        UniValue obj(UniValue::VOBJ);
         CPubKey vchPubKey;
         pwalletMain->GetPubKey(keyID, vchPubKey);
         obj.push_back(Pair("isscript", false));
@@ -93,8 +92,8 @@ public:
         return obj;
     }
 
-    Object operator()(const CScriptID &scriptID) const {
-        Object obj;
+    UniValue operator()(const CScriptID &scriptID) const {
+        UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("isscript", true));
         CScript subscript;
         pwalletMain->GetCScript(scriptID, subscript);
@@ -104,7 +103,7 @@ public:
         ExtractDestinations(subscript, whichType, addresses, nRequired);
         obj.push_back(Pair("script", GetTxnOutputType(whichType)));
         obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
-        Array a;
+        UniValue a(UniValue::VARR);
         BOOST_FOREACH(const CTxDestination& addr, addresses)
             a.push_back(CBitcoinAddress(addr).ToString());
         obj.push_back(Pair("addresses", a));
@@ -115,7 +114,7 @@ public:
 };
 #endif
 
-Value validateaddress(const Array& params, bool fHelp)
+UniValue validateaddress(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -125,7 +124,7 @@ Value validateaddress(const Array& params, bool fHelp)
     CBitcoinAddress address(params[0].get_str());
     bool isValid = address.IsValid();
 
-    Object ret;
+    UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("isvalid", isValid));
     if (isValid)
     {
@@ -136,8 +135,8 @@ Value validateaddress(const Array& params, bool fHelp)
         bool fMine = pwalletMain ? IsMine(*pwalletMain, dest) : false;
         ret.push_back(Pair("ismine", fMine));
         if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
-            ret.insert(ret.end(), detail.begin(), detail.end());
+            UniValue detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+            ret.pushKVs(detail);
         }
         if (pwalletMain && pwalletMain->mapAddressBook.count(dest))
             ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
@@ -147,14 +146,14 @@ Value validateaddress(const Array& params, bool fHelp)
 }
 
 
-static void validateoutputs_check_unconfirmed_spend(COutPoint& outpoint, CTransaction& tx, Object& entry)
+static void validateoutputs_check_unconfirmed_spend(COutPoint& outpoint, CTransaction& tx, UniValue& entry)
 {
     // check whether unconfirmed output is already spent
     LOCK(mempool.cs); // protect mempool.mapNextTx
     if (mempool.mapNextTx.count(outpoint)) {
         // pull details from mempool
         CInPoint in = mempool.mapNextTx[outpoint];
-        Object details;
+        UniValue details(UniValue::VOBJ);
         entry.push_back(Pair("status", "spent"));
         details.push_back(Pair("txid", in.ptx->GetHash().GetHex()));
         details.push_back(Pair("vin", int(in.n)));
@@ -165,38 +164,39 @@ static void validateoutputs_check_unconfirmed_spend(COutPoint& outpoint, CTransa
     }
 }
 
-Value validateoutputs(const Array& params, bool fHelp)
+UniValue validateoutputs(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "validateoutputs [{\"txid\":txid,\"vout\":n},...]\n"
             "Return information about outputs (whether they exist, and whether they have been spent).");
 
-    Array inputs = params[0].get_array();
+    UniValue inputs = params[0].get_array();
 
     CTxDB txdb("r");
     CTxIndex txindex;
-    Array ret;
+    UniValue ret(UniValue::VARR);
 
-    BOOST_FOREACH(Value& input, inputs)
+    for (unsigned int idx = 0; idx < inputs.size(); idx++)
+    //BOOST_FOREACH(UniValue::VOBJ input, inputs)
     {
-        const Object& o = input.get_obj();
+        UniValue o = inputs[idx].get_obj();
 
-        const Value& txid_v = find_value(o, "txid");
-        if (txid_v.type() != str_type)
+        const UniValue& txid_v = find_value(o, "txid");
+        if (txid_v.isNull())
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing txid key");
         string txid = txid_v.get_str();
         if (!IsHex(txid))
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex txid");
 
-        const Value& vout_v = find_value(o, "vout");
-        if (vout_v.type() != int_type)
+        const UniValue& vout_v = find_value(o, "vout");
+        if (!vout_v.isNum())
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing vout key");
         int nOutput = vout_v.get_int();
         if (nOutput < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
 
-        Object entry;
+        UniValue entry(UniValue::VOBJ);
         entry.push_back(Pair("txid", txid));
         entry.push_back(Pair("vout", nOutput));
 
@@ -266,7 +266,7 @@ Value validateoutputs(const Array& params, bool fHelp)
 
         entry.push_back(Pair("status", "spent"));
 
-        Object details;
+        UniValue details(UniValue::VOBJ);
         CTransaction spending_tx;
 
         // load the transaction that spends this output
@@ -308,7 +308,7 @@ Value validateoutputs(const Array& params, bool fHelp)
 }
 
 
-Value validatepubkey(const Array& params, bool fHelp)
+UniValue validatepubkey(const UniValue& params, bool fHelp)
 {
     if (fHelp || !params.size() || params.size() > 2)
         throw runtime_error(
@@ -325,7 +325,7 @@ Value validatepubkey(const Array& params, bool fHelp)
     CBitcoinAddress address;
     address.Set(keyID);
 
-    Object ret;
+    UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("isvalid", isValid));
     if (isValid)
     {
@@ -337,8 +337,8 @@ Value validatepubkey(const Array& params, bool fHelp)
         bool fMine = pwalletMain ? IsMine(*pwalletMain, dest) : false;
         ret.push_back(Pair("ismine", fMine));
         if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
-            ret.insert(ret.end(), detail.begin(), detail.end());
+            UniValue detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+            ret.pushKVs(detail);
         }
         if (pwalletMain && pwalletMain->mapAddressBook.count(dest))
             ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
@@ -347,7 +347,7 @@ Value validatepubkey(const Array& params, bool fHelp)
     return ret;
 }
 
-Value verifymessage(const Array& params, bool fHelp)
+UniValue verifymessage(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw runtime_error(
@@ -383,7 +383,7 @@ Value verifymessage(const Array& params, bool fHelp)
     return (pubkey.GetID() == keyID);
 }
 
-Value setspeech(const Array& params, bool fHelp)
+UniValue setspeech(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -394,5 +394,5 @@ Value setspeech(const Array& params, bool fHelp)
 
     LogPrint("speech", "set default speech to \"%s\"\n", strDefaultSpeech);
 
-    return Value::null;
+    return NullUniValue;
 }
