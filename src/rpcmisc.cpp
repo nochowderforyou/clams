@@ -178,8 +178,6 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
 
     UniValue inputs = params[0].get_array();
 
-    CTxDB txdb("r");
-    CTxIndex txindex;
     UniValue ret(UniValue::VARR);
 
     for (unsigned int idx = 0; idx < inputs.size(); idx++)
@@ -207,36 +205,37 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
 
         CTransaction tx;
         uint256 hashBlock = 0;
-        CTxIndex txindex;
         COutPoint outpoint(uint256(txid), nOutput);
 
-        // find the output
-        if (!GetTransaction(uint256(txid), tx, hashBlock, txindex)) {
+        CCoinsViewCache &view = *pcoinsTip;
+        CCoins coins;
+        if (!view.GetCoins(uint256(txid), coins)) {
             entry.push_back(Pair("status", "txid not found"));
             ret.push_back(entry);
             continue;
         }
 
+
         // check that the output number is in range
-        if ((unsigned)nOutput >= tx.vout.size()) {
+        if ((unsigned)nOutput >= coins.vout.size()) {
             entry.push_back(Pair("status", "vout too high"));
-            entry.push_back(Pair("outputs", (int)tx.vout.size()));
+            entry.push_back(Pair("outputs", (int)coins.vout.size()));
             ret.push_back(entry);
             continue;
         }
 
-        entry.push_back(Pair("amount", ValueFromAmount(tx.vout[nOutput].nValue)));
+        entry.push_back(Pair("amount", ValueFromAmount(coins.vout[nOutput].nValue)));
 
         // get the address and account
         CTxDestination address;
-        if (ExtractDestination(tx.vout[nOutput].scriptPubKey, address))
+        if (ExtractDestination(coins.vout[nOutput].scriptPubKey, address))
         {
             entry.push_back(Pair("address", CBitcoinAddress(address).ToString()));
             if (pwalletMain->mapAddressBook.count(address))
                 entry.push_back(Pair("account", pwalletMain->mapAddressBook[address]));
         }
 
-        const CScript& pk = tx.vout[outpoint.n].scriptPubKey;
+        const CScript& pk = coins.vout[outpoint.n].scriptPubKey;
         entry.push_back(Pair("scriptPubKey", HexStr(pk.begin(), pk.end())));
 
         // is the output confirmed?
@@ -261,6 +260,7 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
             }
         }
 
+        /*   This needs updating
         // check whether any confirmed transaction spends this output
         if (txindex.vSpent[nOutput].IsNull()) {
             // if not, check for an unconfirmed spend
@@ -290,7 +290,7 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
         }
 
         // get the spending transaction
-        if (GetTransaction(uint256(spending_tx.GetHash()), tx, hashBlock, txindex) && hashBlock != 0) {
+        if (GetTransaction(uint256(spending_tx.GetHash()), tx, hashBlock, true) && hashBlock != 0) {
             map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
             if (mi != mapBlockIndex.end() && (*mi).second)
             {
@@ -306,9 +306,10 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
         }
 
         entry.push_back(Pair("spent", details));
+        */
         ret.push_back(entry);
     }
-
+    
     return ret;
 }
 

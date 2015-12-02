@@ -304,8 +304,6 @@ static const CRPCCommand vRPCCommands[] =
     { "settxfee",               &settxfee,               false,     false,     true },
     { "getsubsidy",             &getsubsidy,             true,      false,     false },
     { "reservebalance",         &reservebalance,         false,     true,      true },
-    { "checkwallet",            &checkwallet,            false,     true,      true },
-    { "repairwallet",           &repairwallet,           false,     true,      true },
     { "resendtx",               &resendtx,               false,     true,      true },
     { "makekeypair",            &makekeypair,            false,     true,      false },
     { "setspeech",              &setspeech,              false,     false,     true },

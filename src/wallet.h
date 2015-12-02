@@ -339,7 +339,6 @@ public:
     // get the current wallet format (the oldest client version guaranteed to understand this wallet)
     int GetVersion() { LOCK(cs_wallet); return nWalletVersion; }
 
-    void FixSpentCoins(int& nMismatchSpent, int64_t& nBalanceInQuestion, bool fCheckOnly = false);
     void DisableTransaction(const CTransaction &tx);
     void SumStakingRewards();
 
@@ -726,12 +725,8 @@ public:
     int64_t GetTxTime() const;
     int GetRequestCount() const;
 
-    void AddSupportingTransactions(CTxDB& txdb);
-
-    bool AcceptWalletTransaction(CTxDB& txdb);
-    bool AcceptWalletTransaction();
-
-    void RelayWalletTransaction(CTxDB& txdb);
+    void AddSupportingTransactions();
+    bool AcceptWalletTransaction(bool fCheckInputs=true);
     void RelayWalletTransaction();
 };
 

@@ -129,8 +129,8 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fP
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
-    result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
-    result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
+    result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockWork().getuint256().ToString(), '0')));
+    result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainWork.GetHex(), '0')));
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
     if (blockindex->pnext)
@@ -222,7 +222,7 @@ UniValue dumpbootstrap(const UniValue& params, bool fHelp)
         {
             CBlock block;
             CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
-            block.ReadFromDisk(pblockindex, true);
+            block.ReadFromDisk(pblockindex);
             fileout << FLATDATA(Params().MessageStart()) << fileout.GetSerializeSize(block) << block;
         }
     } catch(const boost::filesystem::filesystem_error &e) {
@@ -329,7 +329,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
     }
 
     CBlock block;
-    block.ReadFromDisk(pblockindex, true);
+    block.ReadFromDisk(pblockindex);
 
     if (params.size() > 2 && params[2].get_bool())
     {
@@ -362,7 +362,7 @@ UniValue getblockbynumber(const UniValue& params, bool fHelp)
     uint256 hash = *pblockindex->phashBlock;
 
     pblockindex = mapBlockIndex[hash];
-    block.ReadFromDisk(pblockindex, true);
+    block.ReadFromDisk(pblockindex);
 
     if (params.size() > 2 && params[2].get_bool())
     {

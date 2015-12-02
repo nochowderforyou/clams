@@ -164,8 +164,6 @@ extern UniValue validateaddress(const UniValue& params, bool fHelp);
 extern UniValue validateoutputs(const UniValue& params, bool fHelp);
 extern UniValue getinfo(const UniValue& params, bool fHelp);
 extern UniValue reservebalance(const UniValue& params, bool fHelp);
-extern UniValue checkwallet(const UniValue& params, bool fHelp);
-extern UniValue repairwallet(const UniValue& params, bool fHelp);
 extern UniValue resendtx(const UniValue& params, bool fHelp);
 extern UniValue makekeypair(const UniValue& params, bool fHelp);
 extern UniValue validatepubkey(const UniValue& params, bool fHelp);

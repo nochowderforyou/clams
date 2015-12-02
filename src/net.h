@@ -88,6 +88,7 @@ enum
 {
     MSG_TX = 1,
     MSG_BLOCK,
+    MSG_FILTERED_BLOCK,
 };
 
 extern bool fDiscover;
@@ -124,6 +125,7 @@ public:
     int nMisbehavior;
     uint64_t nSendBytes;
     uint64_t nRecvBytes;
+    uint64 nBlocksRequested;
     bool fSyncNode;
     double dPingTime;
     double dPingWait;
@@ -198,6 +200,7 @@ public:
     int64_t nLastSend;
     int64_t nLastRecv;
     int64_t nTimeConnected;
+    uint64 nBlocksRequested;
     int nHighestHeightRequested;  /* CDC v1.3.3 */
     int nHeightBackwards;  /* CDC v1.3.3 */
     int64 nHeightBackwardsLast;  /* CDC v1.3.3 */
@@ -267,6 +270,7 @@ public:
         nHeightBackwards = 0;  /* CDC v1.3.3 */
         nHeightBackwardsLast = GetTime();  /* CDC v1.3.3 */
         nTimeConnected = GetTime();
+        nBlocksRequested = 0;
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;

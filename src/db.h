@@ -22,7 +22,8 @@ class CBlockLocator;
 class CDiskBlockIndex;
 class CDiskTxPos;
 class COutPoint;
-class CTxIndex;
+class CWallet;
+class CWalletTx;
 
 extern unsigned int nWalletDBUpdated;
 

@@ -8,6 +8,7 @@
 #include "checkpoints.h"
 
 #include "txdb.h"
+#include "txdb-leveldb.h"
 #include "main.h"
 #include "uint256.h"
 
@@ -74,7 +75,7 @@ namespace Checkpoints
     }
 
     // ppcoin: synchronized checkpoint (centrally broadcasted)
-    uint256 hashSyncCheckpoint = 0;
+    uint256 hashSyncCheckpoint = Params().HashGenesisBlock();
     uint256 hashPendingCheckpoint = 0;
     CSyncCheckpoint checkpointMessage;
     CSyncCheckpoint checkpointMessagePending;
@@ -167,15 +168,14 @@ namespace Checkpoints
             CBlockIndex* pindexCheckpoint = mapBlockIndex[hashPendingCheckpoint];
             if (!pindexCheckpoint->IsInMainChain())
             {
-                CBlock block;
-                if (!block.ReadFromDisk(pindexCheckpoint))
-                    return error("AcceptPendingSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashPendingCheckpoint.ToString());
-                if (!block.SetBestChain(txdb, pindexCheckpoint))
+                CValidationState state;
+                if (!SetBestChain(state, pindexCheckpoint))
                 {
                     hashInvalidCheckpoint = hashPendingCheckpoint;
-                    return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString());
+                    return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
                 }
             }
+
 
             if (!WriteSyncCheckpoint(hashPendingCheckpoint))
                 return error("AcceptPendingSyncCheckpoint(): failed to write sync checkpoint %s", hashPendingCheckpoint.ToString());
@@ -253,14 +253,11 @@ namespace Checkpoints
         if (mapBlockIndex.count(hash) && !mapBlockIndex[hash]->IsInMainChain())
         {
             // checkpoint block accepted but not yet in main chain
-            LogPrintf("ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString());
-            CTxDB txdb;
-            CBlock block;
-            if (!block.ReadFromDisk(mapBlockIndex[hash]))
-                return error("ResetSyncCheckpoint: ReadFromDisk failed for hardened checkpoint %s", hash.ToString());
-            if (!block.SetBestChain(txdb, mapBlockIndex[hash]))
+            LogPrintf("ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString().c_str());
+            CValidationState state;
+            if (!SetBestChain(state, mapBlockIndex[hash]))
             {
-                return error("ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString());
+                return error("ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString().c_str());
             }
         }
         else if(!mapBlockIndex.count(hash))
@@ -283,7 +280,16 @@ namespace Checkpoints
             }
         }
 
-        return false;
+        if (WriteSyncCheckpoint(Params().HashGenesisBlock()))
+        {
+            LogPrintf("ResetSyncCheckpoint: sync-checkpoint reset to hashGenesisBlock\n");
+            return true;
+        }
+        else
+        {
+            LogPrintf("ResetSyncCheckpoint: failed to reset sync-checkpoint to hashGenesisBlock\n");
+            return false;
+        }
     }
 
     void AskForPendingSyncCheckpoint(CNode* pfrom)
@@ -390,18 +396,15 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
     if (!Checkpoints::ValidateSyncCheckpoint(hashCheckpoint))
         return false;
 
-    CTxDB txdb;
     CBlockIndex* pindexCheckpoint = mapBlockIndex[hashCheckpoint];
     if (!pindexCheckpoint->IsInMainChain())
     {
         // checkpoint chain received but not yet main chain
-        CBlock block;
-        if (!block.ReadFromDisk(pindexCheckpoint))
-            return error("ProcessSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashCheckpoint.ToString());
-        if (!block.SetBestChain(txdb, pindexCheckpoint))
+        CValidationState state;
+        if (!SetBestChain(state, pindexCheckpoint))
         {
             Checkpoints::hashInvalidCheckpoint = hashCheckpoint;
-            return error("ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString());
+            return error("ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());
         }
     }
 

@@ -78,6 +78,7 @@ BITCOIN_CORE_H = \
   mruset.h \
   netbase.h \
   net.h \
+  leveldb.h\
   pbkdf2.h \
   protocol.h \
   random.h \
@@ -94,7 +95,6 @@ BITCOIN_CORE_H = \
   tinyformat.h \
   txdb.h \
   txdb-leveldb.h \
-  txmempool.h \
   ui_interface.h \
   uint256.h \
   util.h \
@@ -116,6 +116,7 @@ libbitcoin_server_a_SOURCES = \
   checkpoints.cpp \
   init.cpp \
   kernel.cpp \
+  leveldb.cpp \
   main.cpp \
   miner.cpp \
   net.cpp \
@@ -129,8 +130,8 @@ libbitcoin_server_a_SOURCES = \
   rpcserver.cpp \
   script.cpp \
   timedata.cpp \
+  txdb.cpp \ 
   txdb-leveldb.cpp \
-  txmempool.cpp \
   $(BITCOIN_CORE_H)
 
 # wallet: shared between bitcoind and bitcoin-qt, but only linked

@@ -881,7 +881,7 @@ void CWalletTx::GetAccountAmounts(const string& strAccount, int64_t& nReceived,
     }
 }
 
-void CWalletTx::AddSupportingTransactions(CTxDB& txdb)
+void CWalletTx::AddSupportingTransactions()
 {
     vtxPrev.clear();
 
@@ -915,10 +915,6 @@ void CWalletTx::AddSupportingTransactions(CTxDB& txdb)
                 else if (mapWalletPrev.count(hash))
                 {
                     tx = *mapWalletPrev[hash];
-                }
-                else if (txdb.ReadDiskTx(hash, tx))
-                {
-                    ;
                 }
                 else
                 {
@@ -967,7 +963,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
                     continue;
                 }
             CBlock block;
-            block.ReadFromDisk(pindex, true);
+            block.ReadFromDisk(pindex);
             BOOST_FOREACH(CTransaction& tx, block.vtx)
             {
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
@@ -981,38 +977,33 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
 
 void CWallet::ReacceptWalletTransactions()
 {
-    CTxDB txdb("r");
     bool fRepeat = true;
     while (fRepeat)
     {
         LOCK2(cs_main, cs_wallet);
         fRepeat = false;
-        vector<CDiskTxPos> vMissingTx;
+        bool fMissing = false;
         BOOST_FOREACH(PAIRTYPE(const uint256, CWalletTx)& item, mapWallet)
         {
             CWalletTx& wtx = item.second;
             if ((wtx.IsCoinBase() && wtx.IsSpent(0)) || (wtx.IsCoinStake() && wtx.IsSpent(1)))
                 continue;
 
-            CTxIndex txindex;
+            CCoins coins;
             bool fUpdated = false;
-            if (txdb.ReadTxIndex(wtx.GetHash(), txindex))
+            bool fFound = pcoinsTip->GetCoins(wtx.GetHash(), coins);
+            if (fFound || wtx.GetDepthInMainChain() > 0)
             {
                 // Update fSpent if a tx got spent somewhere else by a copy of wallet.dat
-                if (txindex.vSpent.size() != wtx.vout.size())
-                {
-                    LogPrintf("ERROR: ReacceptWalletTransactions() : txindex.vSpent.size() %"PRIszu" != wtx.vout.size() %"PRIszu"\n", txindex.vSpent.size(), wtx.vout.size());
-                    continue;
-                }
-                for (unsigned int i = 0; i < txindex.vSpent.size(); i++)
+                for (unsigned int i = 0; i < wtx.vout.size(); i++)
                 {
                     if (wtx.IsSpent(i))
                         continue;
-                    if (!txindex.vSpent[i].IsNull() && IsMine(wtx.vout[i]))
+                    if ((i >= coins.vout.size() || coins.vout[i].IsNull()) && IsMine(wtx.vout[i]))
                     {
                         wtx.MarkSpent(i);
                         fUpdated = true;
-                        vMissingTx.push_back(txindex.vSpent[i]);
+                        fMissing = true;
                     }
                 }
                 if (fUpdated)
@@ -1026,10 +1017,10 @@ void CWallet::ReacceptWalletTransactions()
             {
                 // Re-accept any txes of ours that aren't already in a block
                 if (!(wtx.IsCoinBase() || wtx.IsCoinStake()))
-                    wtx.AcceptWalletTransaction(txdb);
+                    wtx.AcceptWalletTransaction(false);
             }
         }
-        if (!vMissingTx.empty())
+        if (fMissing)
         {
             // TODO: optimize this to scan just part of the block chain?
             if (ScanForWalletTransactions(pindexGenesisBlock))
@@ -1038,58 +1029,47 @@ void CWallet::ReacceptWalletTransactions()
     }
 }
 
-void CWalletTx::RelayWalletTransaction(CTxDB& txdb)
+void CWalletTx::RelayWalletTransaction()
 {
     BOOST_FOREACH(const CMerkleTx& tx, vtxPrev)
     {
-        if (!(tx.IsCoinBase() || tx.IsCoinStake()))
-        {
-            uint256 hash = tx.GetHash();
-            if (!txdb.ContainsTx(hash))
-                RelayTransaction((CTransaction)tx, hash);
-        }
+        // Important: versions of bitcoin before 0.8.6 had a bug that inserted
+        // empty transactions into the vtxPrev, which will cause the node to be
+        // banned when retransmitted, hence the check for !tx.vin.empty()
+        if (!tx.IsCoinBase() && !tx.IsCoinStake() && !tx.vin.empty())
+            if (tx.GetDepthInMainChain() == 0)
+                RelayTransaction((CTransaction)tx, tx.GetHash());
     }
-    if (!(IsCoinBase() || IsCoinStake()))
+    if (!IsCoinBase() && !IsCoinStake())
     {
-        uint256 hash = GetHash();
-        if (!txdb.ContainsTx(hash))
-        {
-            LogPrintf("Relaying wtx %s\n", hash.ToString());
+        if (GetDepthInMainChain() == 0) {
+            uint256 hash = GetHash();
+            LogPrintf("Relaying wtx %s\n", hash.ToString().c_str());
             RelayTransaction((CTransaction)*this, hash);
         }
     }
 }
 
-void CWalletTx::RelayWalletTransaction()
-{
-   CTxDB txdb("r");
-   RelayWalletTransaction(txdb);
-}
-
 void CWallet::ResendWalletTransactions(bool fForce)
 {
-    if (!fForce)
-    {
-        // Do this infrequently and randomly to avoid giving away
-        // that these are our transactions.
-        static int64_t nNextTime;
-        if (GetTime() < nNextTime)
-            return;
-        bool fFirst = (nNextTime == 0);
-        nNextTime = GetTime() + GetRand(30 * 60);
-        if (fFirst)
-            return;
+    // Do this infrequently and randomly to avoid giving away
+    // that these are our transactions.
+    static int64 nNextTime;
+    if (GetTime() < nNextTime)
+        return;
+    bool fFirst = (nNextTime == 0);
+    nNextTime = GetTime() + GetRand(30 * 60);
+    if (fFirst)
+        return;
 
-        // Only do it if there's been a new block since last time
-        static int64_t nLastTime;
-        if (nTimeBestReceived < nLastTime)
-            return;
-        nLastTime = GetTime();
-    }
+    // Only do it if there's been a new block since last time
+    static int64 nLastTime;
+    if (nTimeBestReceived < nLastTime)
+        return;
+    nLastTime = GetTime();
 
     // Rebroadcast any of our txes that aren't in a block yet
     LogPrintf("ResendWalletTransactions()\n");
-    CTxDB txdb("r");
     {
         LOCK(cs_wallet);
         // Sort them in chronological order
@@ -1099,16 +1079,13 @@ void CWallet::ResendWalletTransactions(bool fForce)
             CWalletTx& wtx = item.second;
             // Don't rebroadcast until it's had plenty of time that
             // it should have gotten in already by now.
-            if (fForce || nTimeBestReceived - (int64_t)wtx.nTimeReceived > 5 * 60)
+            if (nTimeBestReceived - (int64)wtx.nTimeReceived > 5 * 60)
                 mapSorted.insert(make_pair(wtx.nTimeReceived, &wtx));
         }
         BOOST_FOREACH(PAIRTYPE(const unsigned int, CWalletTx*)& item, mapSorted)
         {
             CWalletTx& wtx = *item.second;
-            if (wtx.CheckTransaction())
-                wtx.RelayWalletTransaction(txdb);
-            else
-                LogPrintf("ResendWalletTransactions() : CheckTransaction failed for transaction %s\n", wtx.GetHash().ToString());
+            wtx.RelayWalletTransaction();
         }
     }
 }
@@ -1841,8 +1818,6 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
 
     {
         LOCK2(cs_main, cs_wallet);
-        // txdb must be opened before the mapWallet lock
-        CTxDB txdb("r");
         {
             nFeeRet = nTransactionFee;
             LogPrint("fee", "[FEE] start with fee = %s\n", FormatMoney(nFeeRet));
@@ -1855,14 +1830,22 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 int64_t nTotalValue = nValue + nFeeRet;
                 double dPriority = 0;
                 // vouts to the payees
-                BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
-                    wtxNew.vout.push_back(CTxOut(s.second, s.first));
-
-                // Choose coins to use
+                  BOOST_FOREACH (const PAIRTYPE(CScript, int64)& s, vecSend)
+                {
+                    CTxOut txout(s.second, s.first);
+                    if (txout.IsDust())
+                    {
+                        LogPrintf("Transaction amount too small");
+                        return false;
+                    }
+                    wtxNew.vout.push_back(txout);
+                }
+                         // Choose coins to use
                 set<pair<const CWalletTx*,unsigned int> > setCoins;
                 int64_t nValueIn = 0;
-                if (!SelectCoins(nTotalValue, wtxNew.nTime, setCoins, nValueIn, coinControl)) {
-                    LogPrintf("CWallet::CreateTransaction failed: coin selection failed\n");
+                if (!SelectCoins(nTotalValue, wtxNew.nTime, setCoins, nValueIn, coinControl))
+                {
+                    LogPrintf("Insufficient funds");
                     return false;
                 }
                 BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
@@ -1948,7 +1931,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
 
                 // Check that enough fee is included
                 int64_t nPayFee = nTransactionFee * (1 + (int64_t)nBytes / 1000);
-                int64_t nMinFee = GetMinFee(wtxNew, 1, GMF_SEND, nBytes);
+                int64_t nMinFee = wtxNew.GetMinFee(1, false, GMF_SEND);
 
                 LogPrint("fee", "[FEE] tx is %d bytes; nPayFee = %s; nMinFee = %s; current fee = %s\n",
                          nBytes, FormatMoney(nPayFee), FormatMoney(nMinFee), FormatMoney(nFeeRet));
@@ -1962,7 +1945,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 LogPrint("fee", "[FEE] so final fee is %s\n", FormatMoney(nFeeRet));
 
                 // Fill vtxPrev by copying from previous transactions vtxPrev
-                wtxNew.AddSupportingTransactions(txdb);
+                wtxNew.AddSupportingTransactions();
                 wtxNew.fTimeReceivedIsTxTime = true;
 
                 break;
@@ -2002,13 +1985,13 @@ bool CWallet::GetStakeWeight(uint64_t& nWeight)
     nWeight = 0;
 
     int64_t nCurrentTime = GetTime();
-    CTxDB txdb("r");
 
     LOCK2(cs_main, cs_wallet);
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        CTxIndex txindex;
-        if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
+        CTransaction tx;
+        uint256 hashBlock = 0;
+        if (!GetTransaction(pcoin.first->GetHash(), tx, hashBlock, true))
             continue;
 
         if (nCurrentTime - pcoin.first->nTime > nStakeMinAge)
@@ -2038,13 +2021,13 @@ bool CWallet::GetExpectedStakeTime(uint64_t& nExpected)
     if (setCoins.empty())
         return false;
 
-    CTxDB txdb("r");
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        CTxIndex txindex;
+        CTransaction tx;
+        uint256 hashBlock = 0;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
+            if (!GetTransaction(pcoin.first->GetHash(), tx, hashBlock, true))
                 continue;
         }
 
@@ -2103,31 +2086,31 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
     int64_t nBlockTime;
-    CTxDB txdb("r");
     CKeyID stakingkeyID;
     uint256 hashProofOfStake = 0;
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        CTxIndex txindex;
+        
+        CTransaction tx;
+        uint256 hashBlock = 0;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!txdb.ReadTxIndex(pcoin.first->hash, txindex)) {
-                LogPrint("stake", "[STAKE] skip %s:%-3d (%s CLAM) - can't read txindex\n",
-                          pcoin.first->hash.ToString(), pcoin.second, FormatMoney(pcoin.first->vout[pcoin.second].nValue));
+            if (!GetTransaction(pcoin.first->GetHash(), tx, hashBlock, true))
                 continue;
-            }
         }
 
         // Read block header
+        if (!mapBlockIndex.count(hashBlock))
+            continue;
+
         CBlock block;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false)) {
-                LogPrint("stake", "[STAKE] skip %s:%-3d (%s CLAM) - can't read block\n",
-                          pcoin.first->hash.ToString(), pcoin.second, FormatMoney(pcoin.first->vout[pcoin.second].nValue));
+            if (!block.ReadFromDisk(mapBlockIndex[hashBlock]))
                 continue;
-            }
         }
+
+            
 
         static int nMaxStakeSearchInterval = 60;
         nBlockTime = block.GetBlockTime();
@@ -2148,7 +2131,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             COutPoint prevoutStake = COutPoint(pcoin.first->hash, pcoin.second);
             LogPrint("stake", "[STAKE] check %s:%-3d (%s CLAM)\n",
                       pcoin.first->hash.ToString(), pcoin.second, FormatMoney(pcoin.first->vout[pcoin.second].nValue));
-            if (CheckStakeKernelHash(pindexPrev, nBits, block, txindex.pos.nTxPos - txindex.pos.nBlockPos, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake, targetProofOfStake))
+            if (CheckStakeKernelHash(pindexPrev, nBits, block, prevoutStake.n, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake, targetProofOfStake))
             {
                 // Found a kernel
                 LogPrint("coinstake", "CreateCoinStake : kernel found\n");
@@ -2229,8 +2212,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     int64_t nReward;
     {
         uint64_t nCoinAge;
-        CTxDB txdb("r");
-        if (!txNew.GetCoinAge(txdb, nCoinAge))
+        if (!txNew.GetCoinAge(nCoinAge))
             return error("CreateCoinStake : failed to calculate coin age");
 
         nReward = GetProofOfStakeReward(pindexBest, nCoinAge, nFees);
@@ -2447,7 +2429,7 @@ string CWallet::SendCLAMSpeech(CWalletTx& wtxNew, string clamSpeech, string pref
     } 
     else if (prefix == "clamour") 
     {
-        clamSpeech = "create clamour " + clamSpeech;
+        clamSpeech = "create clamour" + clamSpeech;
     } 
     else if (prefix.length() > 0)
     {
@@ -2509,7 +2491,6 @@ bool CWallet::CreateCLAMSpeechTransaction(CWalletTx& wtxNew, CReserveKey& reserv
 
 	{
 		LOCK2(cs_main, cs_wallet);
-		CTxDB txdb("r");
 		{
 			nFeeRet = nTransactionFee;
 			LogPrint("fee", "[FEE] start with fee = %s\n", FormatMoney(nFeeRet));
@@ -2575,7 +2556,7 @@ bool CWallet::CreateCLAMSpeechTransaction(CWalletTx& wtxNew, CReserveKey& reserv
 
                 		// Check that enough fee is included
                 		int64_t nPayFee = nTransactionFee * (1 + (int64_t)nBytes / 1000);
-                		int64_t nMinFee = GetMinFee(wtxNew, 1, GMF_SEND, nBytes);
+                		int64_t nMinFee = wtxNew.GetMinFee(1, false, GMF_SEND);
 
                 			LogPrint("fee", "[FEE] tx is %d bytes; nPayFee = %s; nMinFee = %s; current fee = %s\n",
                         		nBytes, FormatMoney(nPayFee), FormatMoney(nMinFee), FormatMoney(nFeeRet));
@@ -2589,7 +2570,7 @@ bool CWallet::CreateCLAMSpeechTransaction(CWalletTx& wtxNew, CReserveKey& reserv
                 		LogPrint("fee", "[FEE] so final fee is %s\n", FormatMoney(nFeeRet));
 
                 		// Fill vtxPrev by copying from previous transactions vtxPrev
-                		wtxNew.AddSupportingTransactions(txdb);
+                		wtxNew.AddSupportingTransactions();
                 		wtxNew.fTimeReceivedIsTxTime = true;
 
                 		break;
@@ -2980,56 +2961,6 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()
     return ret;
 }
 
-// ppcoin: check 'spent' consistency between wallet and txindex
-// ppcoin: fix wallet spent state according to txindex
-void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bool fCheckOnly)
-{
-    nMismatchFound = 0;
-    nBalanceInQuestion = 0;
-
-    LOCK(cs_wallet);
-    vector<CWalletTx*> vCoins;
-    vCoins.reserve(mapWallet.size());
-    for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
-        vCoins.push_back(&(*it).second);
-
-    CTxDB txdb("r");
-    BOOST_FOREACH(CWalletTx* pcoin, vCoins)
-    {
-        // Find the corresponding transaction index
-        CTxIndex txindex;
-        if (!txdb.ReadTxIndex(pcoin->GetHash(), txindex))
-            continue;
-        for (unsigned int n=0; n < pcoin->vout.size(); n++)
-        {
-            if (IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && (txindex.vSpent.size() <= n || txindex.vSpent[n].IsNull()))
-            {
-                LogPrintf("FixSpentCoins found lost coin %s CLAM %s[%d], %s\n",
-                    FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString(), n, fCheckOnly? "repair not attempted" : "repairing");
-                nMismatchFound++;
-                nBalanceInQuestion += pcoin->vout[n].nValue;
-                if (!fCheckOnly)
-                {
-                    pcoin->MarkUnspent(n);
-                    pcoin->WriteToDisk();
-                }
-            }
-            else if (IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && (txindex.vSpent.size() > n && !txindex.vSpent[n].IsNull()))
-            {
-                LogPrintf("FixSpentCoins found spent coin %s CLAM %s[%d], %s\n",
-                    FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString(), n, fCheckOnly? "repair not attempted" : "repairing");
-                nMismatchFound++;
-                nBalanceInQuestion += pcoin->vout[n].nValue;
-                if (!fCheckOnly)
-                {
-                    pcoin->MarkSpent(n);
-                    pcoin->WriteToDisk();
-                }
-            }
-        }
-    }
-}
-
 // ppcoin: disable transaction (only for coinstake)
 void CWallet::DisableTransaction(const CTransaction &tx)
 {
@@ -3225,7 +3156,7 @@ void CWallet::SearchNotaryTransactions(uint256 hash, std::vector<std::pair<std::
     for (int i = 0; pindexFirst && i < blockstogoback; i++) {
 
         CBlock block;
-        block.ReadFromDisk(pindexFirst, true);
+        block.ReadFromDisk(pindexFirst);
 
         BOOST_FOREACH (const CTransaction& tx, block.vtx)
         {
