@@ -2868,7 +2868,7 @@ std::set<std::string> CBlockIndex::GetSupport() const
         return setSupport;
 
     CBlock block;
-    block.ReadFromDisk(this, true);
+    block.ReadFromDisk(this);
 
     fSupportChecked = true;
 
