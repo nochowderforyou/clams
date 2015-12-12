@@ -1890,7 +1890,29 @@ bool CTransaction::CheckInputs(CValidationState &state, CCoinsViewCache &inputs,
 bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoinsViewCache &view, bool *pfClean)
 {
     assert(pindex == view.GetBestBlock());
-    //int64_t nStakeReward = 0;
+    int64_t nStakeReward = 0;
+
+    // avoid dissconnecting stakes during database verification
+    if (IsProofOfStake() && !pfClean) {
+        const CTransaction &tx = vtx[1];
+        int64_t nValueIn = 0;
+
+        for (unsigned int i = 0; i < tx.vin.size(); i++)
+        {
+            const CTxIn& txin = tx.vin[i];
+            CTransaction txPrev;
+            uint256 hashTxPrev = txin.prevout.hash;
+            uint256 hashBlock = 0;
+            CDiskTxPos postx;
+            if (!GetTransaction(hashTxPrev, txPrev, hashBlock, postx, true))
+                return error("DisconnectBlock() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
+
+            nValueIn += txPrev.vout[txin.prevout.n].nValue;
+        }
+
+        nStakeReward = tx.GetValueOut() - nValueIn;
+        LogPrintf("out %s - in %s = reward %s\n", FormatMoney(tx.GetValueOut()), FormatMoney(nValueIn), FormatMoney(nStakeReward));     
+    }
 
     BOOST_FOREACH(CClamour& clamour, pindex->vClamour)
     {
@@ -1927,6 +1949,7 @@ bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoin
         CCoins &outs = view.GetCoins(hash);
 
         CCoins outsBlock = CCoins(tx, pindex->nHeight);
+
         // The CCoins serialization does not serialize negative numbers.
         // No network rules currently depend on the version here, so an inconsistency is harmless
         // but it must be corrected before txout nversion ever influences a network rule.
@@ -1983,6 +2006,9 @@ bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoin
    // ppcoin: clean up wallet after disconnecting coinstake
     BOOST_FOREACH(CTransaction& tx, vtx)
         SyncWithWallets(tx, this, false);
+
+    if (nStakeReward)
+        StakeToWallets(vtx[1].vout[1].scriptPubKey, -nStakeReward, false);
 
     //if (nStakeReward)
     //    StakeToWallets(vtx[1].vout[1].scriptPubKey, -nStakeReward, false);
