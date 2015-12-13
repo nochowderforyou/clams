@@ -488,7 +488,7 @@ public:
     }
 
     // Check whether all prevouts of this transaction are present in the UTXO set represented by view
-    bool HaveInputs(CCoinsViewCache &view) const;
+    bool HaveInputs(CCoinsViewCache &view, int64_t* nDigs = 0) const;
 
     // Check whether all inputs of this transaction are valid (no double spends, scripts & sigs, amounts)
     // This does not modify the UTXO set. If pvChecks is not NULL, script checks are pushed onto it

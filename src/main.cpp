@@ -1760,7 +1760,7 @@ void CTransaction::UpdateCoins(CValidationState &state, CCoinsViewCache &inputs,
     assert(inputs.SetCoins(txhash, CCoins(*this, nHeight)));
 }
 
-bool CTransaction::HaveInputs(CCoinsViewCache &inputs) const
+bool CTransaction::HaveInputs(CCoinsViewCache &inputs, int64_t* nDigs) const
 {
     if (!IsCoinBase()) {
         // first check whether information about the prevout hash is available
@@ -1777,7 +1777,35 @@ bool CTransaction::HaveInputs(CCoinsViewCache &inputs) const
             if (!coins.IsAvailable(prevout.n))
                 return false;
         }
+
+        if (nDigs) {
+            for (unsigned int i = 0; i < vin.size(); i++) {
+                const COutPoint &prevout = vin[i].prevout;
+                int nHeight = -1;
+            
+                CCoins coins;
+                if (inputs.GetCoins(prevout.hash, coins))
+                    nHeight = coins.nHeight;;
+
+                if(nHeight < DISTRIBUTION_END) {
+                     unsigned int n = prevout.n;
+                     if (coins.vout[n].nValue == 460545574) {
+                        *nDigs += coins.vout[n].nValue;
+
+                        CTxDestination address;
+                        LogPrintf("DIG: %s:%d %s from block %d\n",
+                                  prevout.hash.ToString(), n,
+                                  ExtractDestination(coins.vout[n].scriptPubKey, address) ?
+                                  CBitcoinAddress(address).ToString() : "[unknown]",
+                                  nHeight);
+                    }
+                }
+
+            }
+        }
+
     }
+
     return true;
 }
  
@@ -2108,8 +2136,9 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
         if (tx.IsCoinBase())
             nValueOut += tx.GetValueOut();
         else
-        {
-            if (!tx.HaveInputs(view))
+        {  
+            int64_t nDigs = 0;
+            if (!tx.HaveInputs(view, pindex->nHeight >= DISTRIBUTION_END ? &nDigs : 0))
                 return state.DoS(100, error("ConnectBlock() : inputs missing/spent"));
 
             // Add in sigops done by pay-to-script-hash inputs;
@@ -2123,7 +2152,7 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
             int64_t nTxValueOut = tx.GetValueOut();
             nValueIn += nTxValueIn;
             nValueOut += nTxValueOut;
-            //nValueDig += nDigs;
+            nValueDig += nDigs;
 
             if (!tx.IsCoinStake())
                 nFees += nTxValueIn - nTxValueOut;
