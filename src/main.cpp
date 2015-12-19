@@ -1785,7 +1785,7 @@ bool CTransaction::HaveInputs(CCoinsViewCache &inputs, int64_t* nDigs) const
             
                 CCoins coins;
                 if (inputs.GetCoins(prevout.hash, coins))
-                    nHeight = coins.nHeight;;
+                    nHeight = coins.nHeight;
 
                 if(nHeight < DISTRIBUTION_END) {
                      unsigned int n = prevout.n;

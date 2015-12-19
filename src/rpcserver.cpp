@@ -289,6 +289,7 @@ static const CRPCCommand vRPCCommands[] =
     { "signmessage",            &signmessage,            false,     false,     true },
     { "getwork",                &getwork,                true,      false,     true },
     { "getworkex",              &getworkex,              true,      false,     true },
+    { "gettxoutsetinfo",        &gettxoutsetinfo,        true,      false,     false },  
     { "listbalances",           &listbalances,           false,     false,     true },
     { "listaccounts",           &listaccounts,           false,     false,     true },
     { "getblocktemplate",       &getblocktemplate,       true,      false,     false },
