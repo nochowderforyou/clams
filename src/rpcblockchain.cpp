@@ -177,6 +177,18 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fP
     return result;
 }
 
+UniValue ignorenextblock(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "ignorenextblock"
+            );
+
+    nBlocksToIgnore++;
+
+    return "";
+}
+
 UniValue getbestblockhash(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)

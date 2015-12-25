@@ -117,9 +117,12 @@ extern bool fBenchmark;
 extern int nScriptCheckThreads;
 struct COrphanBlock;
 extern std::map<uint256, COrphanBlock*> mapOrphanBlocks;
+extern std::map<uint256, CBlock*> mapDuplicateStakeBlocks;
 extern bool fTxIndex;
 extern unsigned int nCoinCacheSize;
 extern bool fHaveGUI;
+
+extern int nBlocksToIgnore;
 
 // Settings
 extern bool fUseFastIndex;
