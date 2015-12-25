@@ -368,7 +368,7 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int6
         pblock->nTime          = max(pblock->GetBlockTime(), PastDrift(pindexPrev->GetBlockTime(), pindexPrev->nHeight+1));
         if (!fProofOfStake)
             pblock->UpdateTime(pindexPrev);
-        pblock->nBits          = GetNextTargetRequired(pindexPrev, pblock->IsProofOfStake());
+        
         pblock->nNonce         = 0;
         pblocktemplate->vTxSigOps[0] = pblock->vtx[0].GetLegacySigOpCount();
 
@@ -456,7 +456,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 		uint256 hashProof = pblock->GetPoWHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-    if(!pblock->IsProofOfWork())
+    if(!pblock->IsProofOfWork()) 
         return error("CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex());
 
     if (hashProof > hashTarget)
