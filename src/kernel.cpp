@@ -433,12 +433,6 @@ bool CheckProofOfStake(CBlockIndex* pindexPrev, const CTransaction& tx, unsigned
     if (!block.ReadFromDisk(mapBlockIndex[hashBlock]))
         return error("CheckProofOfStake() : read block failed"); // unable to read block of previous transaction
 
-    //LogPrintf("Printing some debug out  xpl\n\n");
-    //pindexPrev->print();
-    //block.print();
-    //LogPrintf("\n\nnumbers for stuff: %d %d %d %d \n\n", postx.nTxPos, postx.nTxOffset, postx.nPos, postx.nTxOffset - postx.nPos);
-    //LogPrintf("\nprevout: %s", txin.ToString().c_str());
-
     if (!CheckStakeKernelHash(pindexPrev, nBits, block, postx.nTxPos - postx.nPos, txPrev, txin.prevout, tx.nTime, hashProofOfStake, targetProofOfStake, fDebug))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
