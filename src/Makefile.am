@@ -94,7 +94,6 @@ BITCOIN_CORE_H = \
   timedata.h \
   tinyformat.h \
   txdb.h \
-  txdb-leveldb.h \
   ui_interface.h \
   uint256.h \
   util.h \
@@ -131,7 +130,6 @@ libbitcoin_server_a_SOURCES = \
   script.cpp \
   timedata.cpp \
   txdb.cpp \ 
-  txdb-leveldb.cpp \
   $(BITCOIN_CORE_H)
 
 # wallet: shared between bitcoind and bitcoin-qt, but only linked

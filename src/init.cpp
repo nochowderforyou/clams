@@ -16,7 +16,6 @@
 #include "net.h"
 #include "util.h"
 #include "ui_interface.h"
-#include "checkpoints.h"
 #include "util.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
@@ -62,7 +61,6 @@ int64_t nCombineLimit;
 bool fCombineAny;
 bool fUseFastIndex;
 bool fCreditStakesToAccounts;
-enum Checkpoints::CPMode CheckpointsMode;
 CKeyID staketokeyID;
 CKeyID rewardtokeyID;
 bool fStakeTo = false;
@@ -458,18 +456,6 @@ bool AppInit2(boost::thread_group& threadGroup)
             setStakeAddresses.insert(CBitcoinAddress(strAddr));
     }
 
-    CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT;
-
-    if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
-
     nDerivationMethodIndex = 0;
 
     if (!SelectParamsFromCommandLine()) {
@@ -795,12 +781,6 @@ bool AppInit2(boost::thread_group& threadGroup)
         }
     }
 #endif
-
-    if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
-    {
-        if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
-            InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
-    }
 
     BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
         AddOneShot(strDest);
