@@ -3122,7 +3122,6 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
     // ppcoin: verify hash target and signature of coinstake tx
     if (pPrev && pblock->IsProofOfStake())
     {
-     LogPrintf("call CheckProofOfStake() with pPrev %x from %s:%d\n", pPrev, __FILE__, __LINE__);
      if (!CheckProofOfStake(state, pPrev, pblock, hash)) {
          LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
          return false; // do not error here as we expect this during initial block download
