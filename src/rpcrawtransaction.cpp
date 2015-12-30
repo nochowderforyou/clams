@@ -655,7 +655,7 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
         if (!fHave) {
             // push to local node
             CValidationState state;
-            if (!tx.AcceptToMemoryPool(state, true, false, NULL, !fOverrideFees))
+            if (!tx.AcceptToMemoryPool(state, false, NULL, !fOverrideFees))
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected"); // TODO: report validation state
         }
     }
