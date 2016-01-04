@@ -372,13 +372,6 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int6
         pblock->nNonce         = 0;
         pblocktemplate->vTxSigOps[0] = pblock->vtx[0].GetLegacySigOpCount();
 
-        CBlockIndex indexDummy(*pblock);
-        indexDummy.pprev = pindexPrev;
-        indexDummy.nHeight = pindexPrev->nHeight + 1;
-        CCoinsViewCache viewNew(*pcoinsTip, true);
-        CValidationState state;
-        if (!pblock->ConnectBlock(state, &indexDummy, viewNew, true))
-            throw std::runtime_error("CreateNewBlock() : ConnectBlock failed");
     }
 
     return pblocktemplate.release();
