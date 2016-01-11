@@ -242,7 +242,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/forms/notarypage.h \
     src/qt/notarypage.h \
     src/qt/clamdb.h \
-    src/qt/clamourpage.h
+    src/qt/clamourpage.h \
+    src/qt/clamoursupportmodel.h
 
 SOURCES += src/txdb-leveldb.cpp \
     src/clamspeech.cpp \
@@ -326,7 +327,8 @@ SOURCES += src/txdb-leveldb.cpp \
     src/qt/forms/notarypage.cpp \
     src/qt/notarypage.cpp \
     src/qt/clamdb.cpp \
-    src/qt/clamourpage.cpp
+    src/qt/clamourpage.cpp \
+    src/qt/clamoursupportmodel.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

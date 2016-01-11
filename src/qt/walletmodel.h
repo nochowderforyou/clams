@@ -131,6 +131,9 @@ public:
     // Create a petition
     void sendClamourTx(std::string hash);
 
+    // Retrieve support for petitions
+    void getPetitionSupport(int nWindow = 10000);
+
     bool getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
     void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
     void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
@@ -205,6 +208,9 @@ signals:
 
     // Petition created
     void clamourTxSent(std::string txID, std::string txError);
+
+    // Petition support retrieved
+    void petitionSupportRetrieved(std::map<std::string, int> mapSupport);
 };
 
 
