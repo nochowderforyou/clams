@@ -5,9 +5,11 @@
 #include "main.h"
 #include "util.h"
 #include "walletmodel.h"
+#include "clamoursupportmodel.h"
 
 #include <QDebug>
 #include <QMessageBox>
+#include <QMenu>
 
 ClamourPage::ClamourPage(QWidget *parent) :
     QWidget(parent),
@@ -28,6 +30,15 @@ ClamourPage::ClamourPage(QWidget *parent) :
     ui->searchClamourTable->horizontalHeader()->setStretchLastSection(true);
 
     clearSearchTable();
+
+    // Context menu for petition support view
+    QAction *searchPetitionIDAction = new QAction(tr("Search for petition"), this);
+    petitionViewContextMenu = new QMenu();
+    petitionViewContextMenu->addAction(searchPetitionIDAction);
+    connect(searchPetitionIDAction, SIGNAL(triggered()), this, SLOT(searchHighlightedPetition()));
+
+    supportModel = new ClamourSupportModel(this);
+    ui->petitionSupportView->setModel(supportModel);
 }
 
 ClamourPage::~ClamourPage()
@@ -181,11 +192,25 @@ void ClamourPage::setClamourSearchResults(CClamour *pResult)
     ui->searchClamourTable->setItem(3, 0, urlItem);
 }
 
+bool petitionPairSort(std::pair<std::string, int> i, std::pair<std::string, int> j) { return i.second > j.second; }
+
+void ClamourPage::showPetitionSupport(std::map<string, int> mapSupport)
+{
+    std::vector<std::pair<std::string, int> > support;
+    for (std::map<std::string, int>::iterator it = mapSupport.begin(); it != mapSupport.end(); ++it) {
+        std::pair<std::string, int> petitionSupport = std::make_pair(it->first, it->second);
+        support.push_back(petitionSupport);
+    }
+    std::sort(support.begin(), support.end(), petitionPairSort);
+    supportModel->setSupport(support);
+}
+
 void ClamourPage::setModel(WalletModel *model)
 {
     this->model = model;
     connect(this->model, SIGNAL(clamourTxSent(std::string, std::string)), this, SLOT(showClamourTxResult(std::string, std::string)));
     connect(this->model, SIGNAL(clamourSearchComplete(CClamour*)), this, SLOT(setClamourSearchResults(CClamour*)));
+    connect(this->model, SIGNAL(petitionSupportRetrieved(std::map<std::string,int>)), this, SLOT(showPetitionSupport(std::map<std::string,int>)));
     loadVotes();
 }
 
@@ -200,3 +225,29 @@ void ClamourPage::on_searchClamourButton_clicked()
     model->searchClamours(pid);
 }
 
+
+void ClamourPage::on_getPetitionSupportButton_clicked()
+{
+    int nWindow = ui->petitionWindowSpinbox->value();
+    model->getPetitionSupport(nWindow);
+}
+
+void ClamourPage::on_petitionSupportView_customContextMenuRequested(const QPoint &pos)
+{
+    QModelIndex index = ui->petitionSupportView->indexAt(pos);
+    if (index.isValid())
+        petitionViewContextMenu->exec(QCursor::pos());
+}
+
+void ClamourPage::searchHighlightedPetition()
+{
+    QModelIndexList indexes = ui->petitionSupportView->selectionModel()->selectedIndexes();
+    if (indexes.size() >= 1)
+    {
+        QModelIndex pidIndex = indexes.at(0);
+        QString pid = ui->petitionSupportView->model()->data(pidIndex).toString();
+        ui->searchClamourEdit->setText(pid);
+        ui->tabWidget->setCurrentIndex(1);
+        on_searchClamourButton_clicked();
+    }
+}
