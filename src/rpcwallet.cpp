@@ -1300,6 +1300,7 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
         list<pair<CTxDestination, int64_t> > listReceived;
         list<pair<CTxDestination, int64_t> > listSent;
         CTxDestination td;
+        bool fStake = false;
 
         // don't count proof-of-work rewards in account balances
         if (wtx.IsCoinBase())
@@ -1312,6 +1313,8 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
 
         // count staking reward in the appropriate account
         if (wtx.IsCoinStake()) {
+            fStake = true;
+
             if (fCreditStakesToAccounts							 && // if we're crediting stakes to the account that owns the staking address,
                 wtx.vout.size() > 1								 && // and we have a staking address
                 IsMine(*pwalletMain, wtx.vout[1].scriptPubKey)	 && // and we own it
@@ -1331,7 +1334,7 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
         if (nDepth >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
         {
             BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
-                if (pwalletMain->mapAddressBook.count(r.first))
+                if (!fStake && pwalletMain->mapAddressBook.count(r.first))
                     mapAccountBalances[pwalletMain->mapAddressBook[r.first]] += r.second;
                 else
                     mapAccountBalances[""] += r.second;
