@@ -1300,7 +1300,7 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
         list<pair<CTxDestination, int64_t> > listReceived;
         list<pair<CTxDestination, int64_t> > listSent;
         CTxDestination td;
-        bool fStake = false;
+        bool fWeStaked = false;
 
         // don't count proof-of-work rewards in account balances
         if (wtx.IsCoinBase())
@@ -1313,11 +1313,11 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
 
         // count staking reward in the appropriate account
         if (wtx.IsCoinStake()) {
-            fStake = true;
+            fWeStaked = (wtx.vout.size() > 1						   && // we have a staking address
+                         IsMine(*pwalletMain, wtx.vout[1].scriptPubKey)); // and we own it
 
             if (fCreditStakesToAccounts							 && // if we're crediting stakes to the account that owns the staking address,
-                wtx.vout.size() > 1								 && // and we have a staking address
-                IsMine(*pwalletMain, wtx.vout[1].scriptPubKey)	 && // and we own it
+                fWeStaked										 && // and we staked this transaction,
                 ExtractDestination(wtx.vout[1].scriptPubKey, td) && // and we can figure out the address
                 pwalletMain->mapAddressBook.count(td)			  ) // and it's in our address book
                 mapAccountBalances[pwalletMain->mapAddressBook[td]] -= nFee; // then credit the reward to its account
@@ -1329,12 +1329,16 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
         } else
             mapAccountBalances[strSentAccount] -= nFee;
 
+        // debit strSentAccount for each of the inputs
         BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
             mapAccountBalances[strSentAccount] -= s.second;
+
+        // credit an account for each of the outputs
         if (nDepth >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
         {
             BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
-                if (!fStake && pwalletMain->mapAddressBook.count(r.first))
+                // credit the account which owns the output's address if we know it, unless the transaction was staked in our wallet
+                if (!fWeStaked && pwalletMain->mapAddressBook.count(r.first))
                     mapAccountBalances[pwalletMain->mapAddressBook[r.first]] += r.second;
                 else
                     mapAccountBalances[""] += r.second;
