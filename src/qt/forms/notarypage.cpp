@@ -1,1 +1,0 @@
-/home/willis/git/clamnotary/clams/src/qt/notarypage.cpp
