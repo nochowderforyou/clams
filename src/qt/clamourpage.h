@@ -10,6 +10,7 @@ class ClamourPage;
 }
 class WalletModel;
 class CClamour;
+class ClamourPetitionModel;
 class ClamourSupportModel;
 
 QT_BEGIN_NAMESPACE
@@ -49,12 +50,12 @@ private slots:
 private:
     Ui::ClamourPage *ui;
     WalletModel *model;
+    ClamourPetitionModel *petitionModel;
     ClamourSupportModel *supportModel;
     QMenu *petitionViewContextMenu;
 
     void loadVotes();
     void saveVotes();
-    void clearSearchTable();
 };
 
 #endif // CLAMOURPAGE_H

@@ -5,6 +5,7 @@
 #include "main.h"
 #include "util.h"
 #include "walletmodel.h"
+#include "clamourpetitionmodel.h"
 #include "clamoursupportmodel.h"
 
 #include <QDebug>
@@ -20,16 +21,8 @@ ClamourPage::ClamourPage(QWidget *parent) :
     ui->createPetitionButton->setEnabled(false);
     ui->setVoteCheckBox->setEnabled(false);
 
-    ui->searchClamourTable->setColumnCount(1);
-    ui->searchClamourTable->setRowCount(4);
-    QStringList tableHeaders = (QStringList() << tr("Height") << tr("TxID") << tr("Petition Hash") << tr("URL"));
-    ui->searchClamourTable->setVerticalHeaderLabels(tableHeaders);
-
-    QStringList horizontalHeaders = (QStringList() << tr("Petition"));
-    ui->searchClamourTable->setHorizontalHeaderLabels(horizontalHeaders);
-    ui->searchClamourTable->horizontalHeader()->setStretchLastSection(true);
-
-    clearSearchTable();
+    petitionModel = new ClamourPetitionModel(this);
+    ui->searchClamourView->setModel(petitionModel);
 
     // Context menu for petition support view
     QAction *searchPetitionIDAction = new QAction(tr("Search for petition"), this);
@@ -45,20 +38,6 @@ ClamourPage::ClamourPage(QWidget *parent) :
 ClamourPage::~ClamourPage()
 {
     delete ui;
-}
-
-void ClamourPage::clearSearchTable()
-{
-    ui->searchClamourTable->clearContents();
-    ui->searchClamourTable->setColumnCount(1);
-    ui->searchClamourTable->setRowCount(4);
-    for (int i = 0; i < ui->searchClamourTable->rowCount(); i++) {
-        for (int j = 0; j < ui->searchClamourTable->columnCount(); j++) {
-            QTableWidgetItem *item = new QTableWidgetItem("");
-            item->setFlags(item->flags() ^ Qt::ItemIsEditable);
-            ui->searchClamourTable->setItem(i, j, item);
-        }
-    }
 }
 
 // Calculate notary ID when text changes.
@@ -179,18 +158,7 @@ void ClamourPage::setClamourSearchResults(CClamour *pResult)
         return;
     }
 
-    QTableWidgetItem *heightItem = new QTableWidgetItem(QString::number(pResult->nHeight));
-    heightItem->setFlags(heightItem->flags() ^ Qt::ItemIsEditable);
-    QTableWidgetItem *txidItem = new QTableWidgetItem(QString::fromStdString(pResult->txid.GetHex()));
-    txidItem->setFlags(txidItem->flags() ^ Qt::ItemIsEditable);
-    QTableWidgetItem *hashItem = new QTableWidgetItem(QString::fromStdString(pResult->strHash));
-    hashItem->setFlags(hashItem->flags() ^ Qt::ItemIsEditable);
-    QTableWidgetItem *urlItem = new QTableWidgetItem(QString::fromStdString(pResult->strURL));
-    urlItem->setFlags(urlItem->flags() ^ Qt::ItemIsEditable);
-    ui->searchClamourTable->setItem(0, 0, heightItem);
-    ui->searchClamourTable->setItem(1, 0, txidItem);
-    ui->searchClamourTable->setItem(2, 0, hashItem);
-    ui->searchClamourTable->setItem(3, 0, urlItem);
+    petitionModel->setPetition(pResult);
 }
 
 bool petitionPairSort(std::pair<std::string, int> i, std::pair<std::string, int> j) { return i.second > j.second; }
@@ -222,7 +190,7 @@ void ClamourPage::on_searchClamourButton_clicked()
         ui->searchClamourEdit->setValid(false);
         return;
     }
-    clearSearchTable();
+    petitionModel->clear();
     model->searchClamours(pid);
 }
 
