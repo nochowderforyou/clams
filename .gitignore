@@ -69,6 +69,7 @@ src/qt/moc_bitcoingui.cpp
 src/qt/moc_bitcoinunits.cpp
 src/qt/moc_clamdb.cpp
 src/qt/moc_clamourpage.cpp
+src/qt/moc_clamourpetitionmodel.cpp
 src/qt/moc_clamoursupportmodel.cpp
 src/qt/moc_clientmodel.cpp
 src/qt/moc_coincontroldialog.cpp
