@@ -367,6 +367,8 @@ QString TransactionTableModel::formatTxType(const TransactionRecord *wtx) const
     case TransactionRecord::NotarySendToAddress:
     case TransactionRecord::NotarySendToOther:
         return tr("Notary, Sent to");
+    case TransactionRecord::CreateClamour:
+        return tr("Created Petition");
     default:
         return QString();
     }
@@ -428,6 +430,7 @@ QString TransactionTableModel::formatCLAMSpeech(const TransactionRecord *wtx, bo
     case TransactionRecord::Notary:
     case TransactionRecord::NotarySendToAddress:
     case TransactionRecord::NotarySendToOther:
+    case TransactionRecord::CreateClamour:
         return QString::fromStdString(wtx->clamspeech);
     case TransactionRecord::Generated:
          return "";
@@ -446,6 +449,7 @@ QVariant TransactionTableModel::addressColor(const TransactionRecord *wtx) const
     case TransactionRecord::Generated:
     case TransactionRecord::Notary:
     case TransactionRecord::NotarySendToAddress:
+    case TransactionRecord::CreateClamour:
         {
         QString label = walletModel->getAddressTableModel()->labelForAddress(QString::fromStdString(wtx->address));
         if(label.isEmpty())
@@ -516,6 +520,8 @@ QString TransactionTableModel::formatTooltip(const TransactionRecord *rec) const
        rec->type==TransactionRecord::NotarySendToAddress || rec->type==TransactionRecord::NotarySendToOther)
     {
         tooltip += QString(" ") + formatTxToAddress(rec, true);
+    } else if(rec->type==TransactionRecord::CreateClamour) {
+        tooltip += QString(" ") + QString::fromStdString(rec->clamspeech).mid(15, 8);
     }
     return tooltip;
 }
