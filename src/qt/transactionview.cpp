@@ -78,6 +78,10 @@ TransactionView::TransactionView(QWidget *parent) :
                                   TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
     typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
     typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
+    typeWidget->addItem(tr("Notary"), TransactionFilterProxy::TYPE(TransactionRecord::Notary) |
+                                TransactionFilterProxy::TYPE(TransactionRecord::NotarySendToAddress) |
+                                TransactionFilterProxy::TYPE(TransactionRecord::NotarySendToOther));
+    typeWidget->addItem(tr("Petition"), TransactionFilterProxy::TYPE(TransactionRecord::CreateClamour));
     typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
 
     hlayout->addWidget(typeWidget);
@@ -189,11 +193,9 @@ void TransactionView::setModel(WalletModel *model)
         transactionView->horizontalHeader()->resizeSection(
                 TransactionTableModel::Type, 120);
 #if QT_VERSION < 0x050000
-    transactionView->horizontalHeader()->setResizeMode(AddressTableModel::Label, QHeaderView::Stretch);
-    transactionView->horizontalHeader()->setResizeMode(AddressTableModel::Address, QHeaderView::ResizeToContents);
+    transactionView->horizontalHeader()->setResizeMode(TransactionTableModel::ToAddress, QHeaderView::ResizeToContents);
 #else
-    transactionView->horizontalHeader()->setSectionResizeMode(AddressTableModel::Label, QHeaderView::Stretch);
-    transactionView->horizontalHeader()->setSectionResizeMode(AddressTableModel::Address, QHeaderView::ResizeToContents);
+    transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::ResizeToContents);
 #endif
         transactionView->horizontalHeader()->resizeSection(
                 TransactionTableModel::Amount, 100);

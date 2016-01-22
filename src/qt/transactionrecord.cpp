@@ -103,8 +103,11 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
 
             TransactionRecord sub(hash, nTime, TransactionRecord::SendToSelf, "",
                              -(nDebit - nChange), nCredit - nChange, clamspeech);
-            if (clamspeech.length() == 71 && clamspeech.compare(0, 7, "notary ") == 0)
+            if (clamspeech.length() == 71 && clamspeech.compare(0, 7, "notary ") == 0) {
                 sub.type = TransactionRecord::Notary;
+            } else if (clamspeech.length() >= 79 && clamspeech.compare(0, 15, "create clamour ") == 0) {
+                sub.type = TransactionRecord::CreateClamour;
+            }
             parts.append(sub);
         }
         else if (fAllFromMe)

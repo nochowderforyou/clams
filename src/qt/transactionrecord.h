@@ -74,7 +74,8 @@ public:
         SendToSelf,
         Notary,
         NotarySendToAddress,
-        NotarySendToOther
+        NotarySendToOther,
+        CreateClamour
     };
 
     /** Number of confirmation recommended for accepting a transaction */
