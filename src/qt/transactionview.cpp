@@ -78,6 +78,10 @@ TransactionView::TransactionView(QWidget *parent) :
                                   TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
     typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
     typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
+    typeWidget->addItem(tr("Notary"), TransactionFilterProxy::TYPE(TransactionRecord::Notary) |
+                                TransactionFilterProxy::TYPE(TransactionRecord::NotarySendToAddress) |
+                                TransactionFilterProxy::TYPE(TransactionRecord::NotarySendToOther));
+    typeWidget->addItem(tr("Petition"), TransactionFilterProxy::TYPE(TransactionRecord::CreateClamour));
     typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
 
     hlayout->addWidget(typeWidget);
