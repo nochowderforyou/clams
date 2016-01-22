@@ -39,6 +39,7 @@ ClamourPage::ClamourPage(QWidget *parent) :
 
     supportModel = new ClamourSupportModel(this);
     ui->petitionSupportView->setModel(supportModel);
+    connect(ui->petitionSupportView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(searchHighlightedPetition()));
 }
 
 ClamourPage::~ClamourPage()
