@@ -104,6 +104,7 @@ QT_MOC_CPP = \
   qt/moc_bitcoinunits.cpp \
   qt/moc_clamdb.cpp \
   qt/moc_clamourpage.cpp \
+  qt/moc_clamourpetitionmodel.cpp \
   qt/moc_clamoursupportmodel.cpp \
   qt/moc_clientmodel.cpp \
   qt/moc_coincontroldialog.cpp \
@@ -159,6 +160,7 @@ BITCOIN_QT_H = \
   qt/bitcoinunits.h \
   qt/clamdb.h \
   qt/clamourpage.h \
+  qt/clamourpetitionmodel.h \
   qt/clamoursupportmodel.h \
   qt/clientmodel.h \
   qt/coincontroldialog.h \
@@ -249,6 +251,7 @@ BITCOIN_QT_CPP = \
   qt/bitcoinunits.cpp \
   qt/clamdb.cpp \
   qt/clamourpage.cpp \
+  qt/clamourpetitionmodel.cpp \
   qt/clamoursupportmodel.cpp \
   qt/clientmodel.cpp \
   qt/csvmodelwriter.cpp \
