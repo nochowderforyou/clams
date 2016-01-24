@@ -83,7 +83,6 @@ public:
 
         // push peer seeders running this network crawler: https://github.com/dooglus/bitcoin-seeder/tree/clam
         PUSH_SEED("clam.just-dice.com")
-        PUSH_SEED("seed.clams.xyz")
 
         // BIP32 version bytes:
         //    public: 0xa8c26d64 ("cpubk...")
