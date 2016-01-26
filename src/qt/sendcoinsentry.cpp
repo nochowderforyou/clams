@@ -23,7 +23,7 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
 #endif
 #if QT_VERSION >= 0x040700
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
-    ui->payTo->setPlaceholderText(tr("Enter a Clam address (e.g. B8gZqgY4r2RoEdqYk3QsAqFckyf9pRHN6i)"));
+    ui->payTo->setPlaceholderText(tr("Enter a Clam address (e.g. x8JdtsqUGiV33P6sMUdfSBHnE7JEUyxTaJ)"));
 #endif
 
     GUIUtil::setupAddressWidget(ui->payTo, this);
