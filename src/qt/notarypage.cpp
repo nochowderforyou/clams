@@ -122,7 +122,7 @@ void NotaryPage::on_selectFileButton_clicked()
     {
         fileName = dlg.selectedFiles()[0];
         setNotaryFileName(fileName);
-        calculateNotaryID();
+        ui->calcNotaryIDbutton->animateClick();
     }
 }
 

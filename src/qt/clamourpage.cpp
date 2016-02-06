@@ -217,6 +217,6 @@ void ClamourPage::searchHighlightedPetition()
         QString pid = ui->petitionSupportView->model()->data(pidIndex).toString();
         ui->searchClamourEdit->setText(pid);
         ui->tabWidget->setCurrentIndex(1);
-        on_searchClamourButton_clicked();
+        ui->searchClamourButton->animateClick();
     }
 }
