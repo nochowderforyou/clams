@@ -23,10 +23,10 @@ SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget *parent) :
     ui->setupUi(this);
 
 #if QT_VERSION >= 0x040700
-    ui->addressIn_SM->setPlaceholderText(tr("Enter a Clam address (e.g. B8gZqgY4r2RoEdqYk3QsAqFckyf9pRHN6i)"));
+    ui->addressIn_SM->setPlaceholderText(tr("Enter a Clam address (e.g. x8JdtsqUGiV33P6sMUdfSBHnE7JEUyxTaJ)"));
     ui->signatureOut_SM->setPlaceholderText(tr("Click \"Sign Message\" to generate signature"));
 
-    ui->addressIn_VM->setPlaceholderText(tr("Enter a Clam address (e.g. B8gZqgY4r2RoEdqYk3QsAqFckyf9pRHN6i)"));
+    ui->addressIn_VM->setPlaceholderText(tr("Enter a Clam address (e.g. x8JdtsqUGiV33P6sMUdfSBHnE7JEUyxTaJ)"));
     ui->signatureIn_VM->setPlaceholderText(tr("Enter Clam signature"));
 #endif
 

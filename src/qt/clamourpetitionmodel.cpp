@@ -49,7 +49,18 @@ QVariant ClamourPetitionModel::data(const QModelIndex &index, int role) const
 QVariant ClamourPetitionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation != Qt::Vertical)
-        return QVariant();
+    {
+        switch (role)
+        {
+        case Qt::DisplayRole:
+        case Qt::ToolTipRole:
+            return tr("Clamour Petition");
+            break;
+        default:
+            return QVariant();
+            break;
+        }
+    }
 
     switch (role)
     {
