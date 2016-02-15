@@ -12,8 +12,8 @@
 #include "wallet.h"
 #include "util.h"
 
-CWallet* pwalletTest;
-CClientUIInterface uiTestInterface;
+CWallet* pwalletMain;
+CClientUIInterface uiInterface;
 
 
 #include <boost/filesystem.hpp>
@@ -39,17 +39,17 @@ struct TestingSetup {
         pcoinsTip = new CCoinsViewCache(*pcoinsdbview);
         InitBlockIndex();
         bool fFirstRun;
-        pwalletTest = new CWallet("wallet.dat");
-        pwalletTest->LoadWallet(fFirstRun);
-        RegisterWallet(pwalletTest);
+        pwalletMain = new CWallet("wallet.dat");
+        pwalletMain->LoadWallet(fFirstRun);
+        RegisterWallet(pwalletMain);
 
     }
     ~TestingSetup()
     {
         threadGroup.interrupt_all();
         threadGroup.join_all();
-        delete pwalletTest;
-        pwalletTest = NULL;
+        delete pwalletMain;
+        pwalletMain = NULL;
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
