@@ -214,6 +214,7 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
+boost::filesystem::path GetTempPath();
 void ShrinkDebugFile();
 long hex2long(const char* hexString);
 int64_t GetTime();

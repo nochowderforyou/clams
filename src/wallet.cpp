@@ -11,7 +11,6 @@
 #include "kernel.h"
 #include "net.h"
 #include "timedata.h"
-#include "txdb.h"
 #include "ui_interface.h"
 #include "walletdb.h"
 #include "util.h"
