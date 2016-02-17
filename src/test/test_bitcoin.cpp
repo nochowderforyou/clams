@@ -12,8 +12,8 @@
 #include "wallet.h"
 #include "util.h"
 
-CWallet* pwalletMain;
-CClientUIInterface uiInterface;
+extern CWallet* pwalletMain;
+//CClientUIInterface uiInterface;
 
 
 #include <boost/filesystem.hpp>

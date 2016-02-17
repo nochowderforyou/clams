@@ -29,6 +29,7 @@ BITCOIN_TESTS =\
   test/mruset_tests.cpp \
   test/netbase_tests.cpp \
   test/rpc_tests.cpp \
+  test/script_tests.cpp \
   test/test_bitcoin.cpp \
   test/transaction_tests.cpp \
   test/sigopcount_tests.cpp \
