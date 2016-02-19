@@ -308,7 +308,7 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
 
      // Transaction comment
     std::string clamspeech;
-    if (params.size() > 4 && params[4].isNull() && !params[4].get_str().empty())
+    if (params.size() > 4 && !params[4].isNull() && !params[4].get_str().empty())
     {
         clamspeech = params[4].get_str();
         if (clamspeech.length() > MAX_TX_COMMENT_LEN)
