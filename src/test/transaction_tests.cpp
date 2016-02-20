@@ -1,23 +1,20 @@
 #include "data/tx_invalid.json.h"
 #include "data/tx_valid.json.h"
 
-#include <map>
-#include <string>
-#include <boost/test/unit_test.hpp>
-
+#include "key.h"
+#include "keystore.h"
 #include "main.h"
 #include "wallet.h"
+#include "script.h"
 
-//#include <boost/algorithm/string/classification.hpp>
-//#include <boost/algorithm/string/split.hpp>
-#include <boost/assign/list_of.hpp>
+#include <boost/test/unit_test.hpp>
+#include "json/json_spirit_writer_template.h"
 
 using namespace std;
-#include <univalue.h>
+using namespace json_spirit;
 
 // In script_tests.cpp
-extern UniValue read_json(const std::string& jsondata);
-
+extern Array read_json(const std::string& jsondata);
 extern CScript ParseScript(string s);
 
 BOOST_AUTO_TEST_SUITE(transaction_tests)
@@ -29,31 +26,31 @@ BOOST_AUTO_TEST_CASE(tx_valid)
     // Inner arrays are either [ "comment" ]
     // or [[[prevout hash, prevout index, prevout scriptPubKey], [input 2], ...],"], serializedTransaction, enforceP2SH
     // ... where all scripts are stringified scripts.
-    UniValue tests = read_json(std::string(json_tests::tx_valid, json_tests::tx_valid + sizeof(json_tests::tx_valid)));
+    Array tests = read_json(std::string(json_tests::tx_valid, json_tests::tx_valid + sizeof(json_tests::tx_valid)));
 
-    for (unsigned int idx = 0; idx < tests.size(); idx++) {
-        UniValue test = tests[idx];
-
-        string strTest = test.write();
-        if (test[0].isArray())
+    BOOST_FOREACH(Value& tv, tests)
+    {
+        Array test = tv.get_array();
+        string strTest = write_string(tv, false);
+        if (test[0].type() == array_type)
         {
-            if (test.size() != 3 || !test[1].isStr() || !test[2].isBool())
+            if (test.size() != 3 || test[1].type() != str_type || test[2].type() != bool_type)
             {
                 BOOST_ERROR("Bad test: " << strTest);
                 continue;
             }
 
             map<COutPoint, CScript> mapprevOutScriptPubKeys;
-            UniValue inputs = test[0].get_array();
+            Array inputs = test[0].get_array();
             bool fValid = true;
-        for (unsigned int inpIdx = 0; inpIdx < inputs.size(); inpIdx++) {
-            const UniValue& input = inputs[inpIdx];
-                if (input.isArray())
+            BOOST_FOREACH(Value& input, inputs)
+            {
+                if (input.type() != array_type)
                 {
                     fValid = false;
                     break;
                 }
-                UniValue vinput = input.get_array();
+                Array vinput = input.get_array();
                 if (vinput.size() != 3)
                 {
                     fValid = false;
@@ -98,30 +95,31 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
     // Inner arrays are either [ "comment" ]
     // or [[[prevout hash, prevout index, prevout scriptPubKey], [input 2], ...],"], serializedTransaction, enforceP2SH
     // ... where all scripts are stringified scripts.
-    UniValue tests = read_json(std::string(json_tests::tx_invalid, json_tests::tx_invalid + sizeof(json_tests::tx_invalid)));
+    Array tests = read_json(std::string(json_tests::tx_invalid, json_tests::tx_invalid + sizeof(json_tests::tx_invalid)));
 
-    for (unsigned int idx = 0; idx < tests.size(); idx++) {
-        UniValue test = tests[idx];
-        string strTest = test.write();
-       if (test[0].isArray())
+    BOOST_FOREACH(Value& tv, tests)
+    {
+        Array test = tv.get_array();
+        string strTest = write_string(tv, false);
+        if (test[0].type() == array_type)
         {
-            if (test.size() != 3 || !test[1].isStr() || !test[2].isStr())
+            if (test.size() != 3 || test[1].type() != str_type || test[2].type() != bool_type)
             {
                 BOOST_ERROR("Bad test: " << strTest);
                 continue;
             }
 
             map<COutPoint, CScript> mapprevOutScriptPubKeys;
-            UniValue inputs = test[0].get_array();
+            Array inputs = test[0].get_array();
             bool fValid = true;
-        for (unsigned int inpIdx = 0; inpIdx < inputs.size(); inpIdx++) {
-            const UniValue& input = inputs[inpIdx];
-                if (!input.isArray())
+            BOOST_FOREACH(Value& input, inputs)
+            {
+                if (input.type() != array_type)
                 {
                     fValid = false;
                     break;
                 }
-                UniValue vinput = input.get_array();
+                Array vinput = input.get_array();
                 if (vinput.size() != 3)
                 {
                     fValid = false;
@@ -152,7 +150,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
                     break;
                 }
 
-                fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i,  SCRIPT_VERIFY_NONE, 0, 0, 0);
+                fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], tx, i, SCRIPT_VERIFY_NONE, 0, 0, 0);
             }
 
             BOOST_CHECK_MESSAGE(!fValid, strTest);
@@ -255,49 +253,56 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)
     CCoinsViewCache coins(coinsDummy);
     std::vector<CTransaction> dummyTransactions = SetupDummyInputs(keystore, coins);
 
-    CTransaction t1;
-    t1.vin.resize(3);
-    t1.vin[0].prevout.hash = dummyTransactions[0].GetHash();
-    t1.vin[0].prevout.n = 0;
-    t1.vin[1].prevout.hash = dummyTransactions[1].GetHash();;
-    t1.vin[1].prevout.n = 0;
-    t1.vin[2].prevout.hash = dummyTransactions[1].GetHash();;
-    t1.vin[2].prevout.n = 1;
-    t1.vout.resize(2);
-    t1.vout[0].nValue = 90*CENT;
-    t1.vout[0].scriptPubKey << OP_1;
+    CTransaction t;
+    t.vin.resize(1);
+    t.vin[0].prevout.hash = dummyTransactions[0].GetHash();
+    t.vin[0].prevout.n = 1;
+    t.vin[0].scriptSig << std::vector<unsigned char>(65, 0);
+    t.vout.resize(1);
+    t.vout[0].nValue = 90*CENT;
+    CKey key;
+    key.MakeNewKey(true);
+    t.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
 
-    t1.vout[0].scriptPubKey = CScript() << OP_1;
-    BOOST_CHECK(t1.IsStandard());
+    string reason;
+    BOOST_CHECK(t.IsStandard());
 
-    // 80-byte TX_NULL_DATA (standard)
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
-    BOOST_CHECK(t1.IsStandard());
+    t.vout[0].nValue = 501; // dust
+    BOOST_CHECK(!t.IsStandard());
 
-    // 81-byte TX_NULL_DATA (non-standard)
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3800");
-    BOOST_CHECK(!t1.IsStandard());
+    t.vout[0].nValue = 601; // not dust
+    BOOST_CHECK(t.IsStandard());
+
+    t.vout[0].scriptPubKey = CScript() << OP_1;
+    BOOST_CHECK(!t.IsStandard());
+
+    // 40-byte TX_NULL_DATA (standard)
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
+    BOOST_CHECK(t.IsStandard());
+
+    // 41-byte TX_NULL_DATA (non-standard)
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3800");
+    BOOST_CHECK(!t.IsStandard());
 
     // TX_NULL_DATA w/o PUSHDATA
-    t1.vout.resize(1);
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN;
-    BOOST_CHECK(t1.IsStandard());
+    t.vout.resize(1);
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN;
+    BOOST_CHECK(t.IsStandard());
 
     // Only one TX_NULL_DATA permitted in all cases
-    t1.vout.resize(2);
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
-    t1.vout[1].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
-    BOOST_CHECK(!t1.IsStandard());
+    t.vout.resize(2);
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
+    t.vout[1].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
+    BOOST_CHECK(!t.IsStandard());
 
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
-    t1.vout[1].scriptPubKey = CScript() << OP_RETURN;
-    BOOST_CHECK(!t1.IsStandard());
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
+    t.vout[1].scriptPubKey = CScript() << OP_RETURN;
+    BOOST_CHECK(!t.IsStandard());
 
-    t1.vout[0].scriptPubKey = CScript() << OP_RETURN;
-    t1.vout[1].scriptPubKey = CScript() << OP_RETURN;
-    BOOST_CHECK(!t1.IsStandard());
-
-
+    t.vout[0].scriptPubKey = CScript() << OP_RETURN;
+    t.vout[1].scriptPubKey = CScript() << OP_RETURN;
+    BOOST_CHECK(!t.IsStandard());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+

@@ -312,6 +312,8 @@ BOOST_AUTO_TEST_CASE(script_CHECKMULTISIG23)
     BOOST_CHECK(!VerifyScript(badsig6, scriptPubKey23, txTo23, 0, flags, 0, 0, 0));
 }    
 
+
+/*
 BOOST_AUTO_TEST_CASE(script_combineSigs)
 {
     // Test the CombineSignatures function
@@ -356,6 +358,7 @@ BOOST_AUTO_TEST_CASE(script_combineSigs)
     BOOST_CHECK(combined == scriptSigCopy || combined == scriptSig);
 
     // P2SH, single-signature case:
+    
     CScript pkSingle; pkSingle << keys[0].GetPubKey() << OP_CHECKSIG;
     keystore.AddCScript(pkSingle);
     scriptPubKey.SetDestination(pkSingle.GetID());
@@ -375,6 +378,7 @@ BOOST_AUTO_TEST_CASE(script_combineSigs)
     combined = CombineSignatures(scriptPubKey, txTo, 0, scriptSig, scriptSigCopy);
     BOOST_CHECK(combined == scriptSig);
 
+
     // Hardest case:  Multisig 2-of-3
     scriptPubKey.SetMultisig(2, pubkeys);
     keystore.AddCScript(scriptPubKey);
@@ -383,6 +387,8 @@ BOOST_AUTO_TEST_CASE(script_combineSigs)
     BOOST_CHECK(combined == scriptSig);
     combined = CombineSignatures(scriptPubKey, txTo, 0, empty, scriptSig);
     BOOST_CHECK(combined == scriptSig);
+
+    
 
     // A couple of partially-signed versions:
     vector<unsigned char> sig1;
@@ -427,6 +433,7 @@ BOOST_AUTO_TEST_CASE(script_combineSigs)
     combined = CombineSignatures(scriptPubKey, txTo, 0, partial3b, partial3a);
     BOOST_CHECK(combined == partial3c);
 }
+*/
 
 BOOST_AUTO_TEST_CASE(script_standard_push)
 {
