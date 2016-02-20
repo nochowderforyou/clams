@@ -30,7 +30,7 @@ static string json_escape(const string& inS)
 
         else {
             char tmpesc[16];
-            sprintf(tmpesc, "\\u%04x", ch);
+            sprintf(tmpesc, "\\x%02x", ch);
             outS += tmpesc;
         }
     }

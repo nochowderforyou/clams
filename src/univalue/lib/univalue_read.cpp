@@ -185,6 +185,16 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
                 case 'r':  valStr += "\r"; break;
                 case 't':  valStr += "\t"; break;
 
+                case 'x': {
+                    unsigned int hex;
+                    if (hatoui(raw + 1, raw + 1 + 2, hex) != raw + 1 + 2)
+                        return JTOK_ERR;
+                    valStr.push_back(hex);
+
+                    raw += 2;
+                    break;
+                }
+
                 case 'u': {
                     unsigned int codepoint;
                     if (hatoui(raw + 1, raw + 1 + 4, codepoint) !=
@@ -204,7 +214,8 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
 
                     raw += 4;
                     break;
-                    }
+                }
+
                 default:
                     return JTOK_ERR;
 
