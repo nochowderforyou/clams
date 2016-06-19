@@ -3410,28 +3410,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
 
 
-
-    // Be more aggressive with blockchain download. Send new getblocks() message after connection
-    // to new node if waited longer than MAX_TIME_SINCE_BEST_BLOCK.
-    int64 TimeSinceBestBlock = GetTime() - nTimeBestReceived;
-    if (TimeSinceBestBlock > MAX_TIME_SINCE_BEST_BLOCK) {
-        //LogPrintf("INFO: Waiting %d sec which is too long. Sending GetBlocks(0)\n", TimeSinceBestBlock);
-        PushGetBlocks(pfrom, pindexBest, uint256(0));
-    }
-
-        // ppcoin: ask for pending sync-checkpoint if any
-        if (!IsInitialBlockDownload())
-            Checkpoints::AskForPendingSyncCheckpoint(pfrom);
-
-        // CDC v1.3.3: reset counts to detect forked peers
-        pfrom->nHighestHeightRequested = 0;  /* CDC v1.3.3 */
-        pfrom->nHeightBackwards = 0;  /* CDC v1.3.3 */
-        pfrom->nHeightBackwardsLast = GetTime();  /* CDC v1.3.3 */
-
-        pfrom->nTimeOffset = nTime - GetTime();
-
+        int64_t nTimeOffset = nTime - GetTime();
+        pfrom->nTimeOffset = nTimeOffset;
         if (GetBoolArg("-synctime", true))
-            AddTimeData(pfrom->addr, nTime);
+            AddTimeData(pfrom->addr, nTimeOffset);
     }
 
 
