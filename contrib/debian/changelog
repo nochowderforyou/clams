@@ -1,3 +1,9 @@
+clam (1.4.5~dfsg-1) stable; urgency=medium
+
+  * Borrow source from Novacoin and rebrand for Clam
+
+  -- Lance G. (ShapeShifter499) <Gero3977@gmail.com> Thu, 08 Sep 2016 00:52:00 -0800
+
 novacoin (0.4.0~dfsg-1) unstable; urgency=low
 
   [ Balthazar ]
