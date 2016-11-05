@@ -78,6 +78,7 @@ BITCOIN_CORE_H = \
   mruset.h \
   netbase.h \
   net.h \
+  leveldb.h\
   pbkdf2.h \
   protocol.h \
   random.h \
@@ -93,14 +94,23 @@ BITCOIN_CORE_H = \
   timedata.h \
   tinyformat.h \
   txdb.h \
-  txdb-leveldb.h \
-  txmempool.h \
   ui_interface.h \
   uint256.h \
   util.h \
   version.h \
   wallet.h \
   walletdb.h
+
+JSON_H = \
+  json/json_spirit.h \
+  json/json_spirit_error_position.h \
+  json/json_spirit_reader.h \
+  json/json_spirit_reader_template.h \
+  json/json_spirit_stream_reader.h \
+  json/json_spirit_utils.h \
+  json/json_spirit_value.h \
+  json/json_spirit_writer.h \
+  json/json_spirit_writer_template.h
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -116,6 +126,7 @@ libbitcoin_server_a_SOURCES = \
   checkpoints.cpp \
   init.cpp \
   kernel.cpp \
+  leveldb.cpp \
   main.cpp \
   miner.cpp \
   net.cpp \
@@ -129,8 +140,8 @@ libbitcoin_server_a_SOURCES = \
   rpcserver.cpp \
   script.cpp \
   timedata.cpp \
-  txdb-leveldb.cpp \
-  txmempool.cpp \
+  txdb.cpp \ 
+  $(JSON_H) \
   $(BITCOIN_CORE_H)
 
 # wallet: shared between bitcoind and bitcoin-qt, but only linked

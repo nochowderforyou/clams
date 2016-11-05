@@ -13,7 +13,6 @@
 using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
-extern enum Checkpoints::CPMode CheckpointsMode;
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -129,8 +128,8 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fP
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
-    result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
-    result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
+    result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockWork().getuint256().ToString(), '0')));
+    result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainWork.GetHex(), '0')));
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
     if (blockindex->pnext)
@@ -175,6 +174,18 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fP
         result.push_back(Pair("signature", HexStr(block.vchBlockSig.begin(), block.vchBlockSig.end())));
 
     return result;
+}
+
+UniValue ignorenextblock(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "ignorenextblock"
+            );
+
+    nBlocksToIgnore++;
+
+    return "";
 }
 
 UniValue getbestblockhash(const UniValue& params, bool fHelp)
@@ -222,7 +233,7 @@ UniValue dumpbootstrap(const UniValue& params, bool fHelp)
         {
             CBlock block;
             CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
-            block.ReadFromDisk(pblockindex, true);
+            block.ReadFromDisk(pblockindex);
             fileout << FLATDATA(Params().MessageStart()) << fileout.GetSerializeSize(block) << block;
         }
     } catch(const boost::filesystem::filesystem_error &e) {
@@ -329,7 +340,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
     }
 
     CBlock block;
-    block.ReadFromDisk(pblockindex, true);
+    block.ReadFromDisk(pblockindex);
 
     if (params.size() > 2 && params[2].get_bool())
     {
@@ -362,7 +373,7 @@ UniValue getblockbynumber(const UniValue& params, bool fHelp)
     uint256 hash = *pblockindex->phashBlock;
 
     pblockindex = mapBlockIndex[hash];
-    block.ReadFromDisk(pblockindex, true);
+    block.ReadFromDisk(pblockindex);
 
     if (params.size() > 2 && params[2].get_bool())
     {
@@ -380,28 +391,36 @@ UniValue getcheckpoint(const UniValue& params, bool fHelp)
     if (fHelp || params.size() != 0)
         throw runtime_error(
             "getcheckpoint\n"
-            "Show info of synchronized checkpoint.\n");
+            "Show info of checkpoint.\n");
 
     UniValue result(UniValue::VOBJ);
-    CBlockIndex* pindexCheckpoint;
+    const CBlockIndex* pindexCheckpoint = Checkpoints::AutoSelectSyncCheckpoint();
 
-    result.push_back(Pair("synccheckpoint", Checkpoints::hashSyncCheckpoint.ToString().c_str()));
-    pindexCheckpoint = mapBlockIndex[Checkpoints::hashSyncCheckpoint];
+    result.push_back(Pair("checkpoint", pindexCheckpoint->GetBlockHash().ToString().c_str()));
     result.push_back(Pair("height", pindexCheckpoint->nHeight));
     result.push_back(Pair("timestamp", DateTimeStrFormat(pindexCheckpoint->GetBlockTime()).c_str()));
 
-    // Check that the block satisfies synchronized checkpoint
-    if (CheckpointsMode == Checkpoints::STRICT)
-        result.push_back(Pair("policy", "strict"));
-
-    if (CheckpointsMode == Checkpoints::ADVISORY)
-        result.push_back(Pair("policy", "advisory"));
-
-    if (CheckpointsMode == Checkpoints::PERMISSIVE)
-        result.push_back(Pair("policy", "permissive"));
-
-    if (mapArgs.count("-checkpointkey"))
-        result.push_back(Pair("checkpointmaster", true));
-
     return result;
+}
+
+UniValue gettxoutsetinfo(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "gettxoutsetinfo\n"
+            "Returns statistics about the unspent transaction output set.");
+
+    UniValue ret(UniValue::VOBJ);
+
+    CCoinsStats stats;
+    if (pcoinsTip->GetStats(stats)) {
+        ret.push_back(Pair("height", (boost::int64_t)stats.nHeight));
+        ret.push_back(Pair("bestblock", stats.hashBlock.GetHex()));
+        ret.push_back(Pair("transactions", (boost::int64_t)stats.nTransactions));
+        ret.push_back(Pair("txouts", (boost::int64_t)stats.nTransactionOutputs));
+        ret.push_back(Pair("bytes_serialized", (boost::int64_t)stats.nSerializedSize));
+        ret.push_back(Pair("hash_serialized", stats.hashSerialized.GetHex()));
+        ret.push_back(Pair("total_amount", ValueFromAmount(stats.nTotalAmount)));
+    }
+    return ret;
 }

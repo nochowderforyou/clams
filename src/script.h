@@ -21,6 +21,7 @@
 typedef std::vector<unsigned char> valtype;
 
 class CTransaction;
+class CCoins;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 static const unsigned int MAX_OP_RETURN_RELAY = 40;      // bytes

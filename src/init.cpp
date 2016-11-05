@@ -16,7 +16,6 @@
 #include "net.h"
 #include "util.h"
 #include "ui_interface.h"
-#include "checkpoints.h"
 #include "util.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
@@ -34,9 +33,17 @@
 #include <signal.h>
 #endif
 
-
 using namespace std;
 using namespace boost;
+
+#ifdef WIN32
+// Win32 LevelDB doesn't use filedescriptors, and the ones used for
+// accessing block files, don't count towards to fd_set size limit
+// anyway.
+#define MIN_CORE_FILEDESCRIPTORS 0
+#else
+#define MIN_CORE_FILEDESCRIPTORS 150
+#endif
 
 #ifdef ENABLE_WALLET
 CWallet* pwalletMain = NULL;
@@ -54,7 +61,6 @@ int64_t nCombineLimit;
 bool fCombineAny;
 bool fUseFastIndex;
 bool fCreditStakesToAccounts;
-enum Checkpoints::CPMode CheckpointsMode;
 CKeyID staketokeyID;
 CKeyID rewardtokeyID;
 bool fStakeTo = false;
@@ -104,6 +110,8 @@ bool ShutdownRequested()
     return fRequestShutdown;
 }
 
+static CCoinsViewDB *pcoinsdbview;
+
 void Shutdown()
 {
     LogPrintf("Shutdown : In progress...\n");
@@ -112,7 +120,6 @@ void Shutdown()
     if (!lockShutdown) return;
 
     RenameThread("clam-shutoff");
-    mempool.AddTransactionsUpdated(1);
     StopRPCThreads();
 #ifdef ENABLE_WALLET
     ShutdownRPCMining();
@@ -122,10 +129,14 @@ void Shutdown()
     StopNode();
     {
         LOCK(cs_main);
-#ifdef ENABLE_WALLET
         if (pwalletMain)
             pwalletMain->SetBestChain(CBlockLocator(pindexBest));
-#endif
+        if (pblocktree)
+            pblocktree->Flush();
+        if (pcoinsTip)
+            pcoinsTip->Flush();
+        delete pcoinsTip; pcoinsTip = NULL;
+        delete pcoinsdbview; pcoinsdbview = NULL;
     }
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -313,6 +324,68 @@ bool InitSanityCheck(void)
     return true;
 }
 
+struct CImportingNow
+{
+    CImportingNow() {
+        assert(fImporting == false);
+        fImporting = true;
+    }
+
+    ~CImportingNow() {
+        assert(fImporting == true);
+        fImporting = false;
+    }
+};
+
+void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
+{
+    RenameThread("bitcoin-loadblk");
+
+    // -reindex
+    if (fReindex) {
+        CImportingNow imp;
+        int nFile = 0;
+        while (true) {
+            CDiskBlockPos pos(nFile, 0);
+            FILE *file = OpenBlockFile(pos, true);
+            if (!file)
+                break;
+            LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            LoadExternalBlockFile(file, &pos);
+            nFile++;
+        }
+        pblocktree->WriteReindexing(false);
+        fReindex = false;
+        LogPrintf("Reindexing finished\n");
+        // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
+        InitBlockIndex();
+    }
+
+    // hardcoded $DATADIR/bootstrap.dat
+    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (filesystem::exists(pathBootstrap)) {
+        FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
+        if (file) {
+            CImportingNow imp;
+            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            LogPrintf("Importing bootstrap.dat...\n");
+            LoadExternalBlockFile(file);
+            RenameOver(pathBootstrap, pathBootstrapOld);
+        }
+    }
+
+    // -loadblock=
+    BOOST_FOREACH(boost::filesystem::path &path, vImportFiles) {
+        FILE *file = fopen(path.string().c_str(), "rb");
+        if (file) {
+            CImportingNow imp;
+            LogPrintf("Importing %s...\n", path.string().c_str());
+            LoadExternalBlockFile(file);
+        }
+    }
+}
+
+
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
@@ -383,18 +456,6 @@ bool AppInit2(boost::thread_group& threadGroup)
             setStakeAddresses.insert(CBitcoinAddress(strAddr));
     }
 
-    CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT;
-
-    if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
-
     nDerivationMethodIndex = 0;
 
     if (!SelectParamsFromCommandLine()) {
@@ -440,6 +501,18 @@ bool AppInit2(boost::thread_group& threadGroup)
     // ********************************************************* Step 3: parameter-to-internal-flags
 
     fDebug = !mapMultiArgs["-debug"].empty();
+    fBenchmark = !mapMultiArgs["-benchmark"].empty();
+
+    // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency
+    nScriptCheckThreads = GetArg("-par", 0);
+    if (nScriptCheckThreads <= 0)
+        nScriptCheckThreads += boost::thread::hardware_concurrency();
+    if (nScriptCheckThreads <= 1)
+        nScriptCheckThreads = 0;
+    else if (nScriptCheckThreads > MAX_SCRIPTCHECK_THREADS)
+        nScriptCheckThreads = MAX_SCRIPTCHECK_THREADS;
+
+
     // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
     const vector<string>& categories = mapMultiArgs["-debug"];
     if (GetBoolArg("-nodebug", false) || find(categories.begin(), categories.end(), string("0")) != categories.end())
@@ -560,13 +633,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (!fDisableWallet) {
         uiInterface.InitMessage(_("Verifying database integrity..."));
 
-        if (GetBoolArg("-reindex", false) )
-        {
-            LogPrintf("Reindex remove database directory\n");
-            boost::filesystem::path pathDatabase = GetDataDir() / "database";
-            boost::filesystem::remove_all(pathDatabase);
-        }
-
         if (!bitdb.Open(GetDataDir()))
         {
             // try moving the database env out of the way
@@ -574,7 +640,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             boost::filesystem::path pathDatabaseBak = GetDataDir() / strprintf("database.%d.bak", GetTime());
             try {
                 boost::filesystem::rename(pathDatabase, pathDatabaseBak);
-                LogPrintf("Moved old %s to %s. Retrying.\n", pathDatabase.string(), pathDatabaseBak.string());
+                LogPrintf("Moved old %s to %s. Retrying.\n", pathDatabase.string().c_str(), pathDatabaseBak.string().c_str());
             } catch(boost::filesystem::filesystem_error &error) {
                  // failure is ok (well, not really, but it's not worse than what we started with)
             }
@@ -582,11 +648,10 @@ bool AppInit2(boost::thread_group& threadGroup)
             // try again
             if (!bitdb.Open(GetDataDir())) {
                 // if it still fails, it probably means we can't even create the database env
-                string msg = strprintf(_("Error initializing wallet database environment %s!"), strDataDir);
+                string msg = strprintf(_("Error initializing wallet database environment %s!"), strDataDir.c_str());
                 return InitError(msg);
             }
         }
-
 
         if (GetBoolArg("-salvagewallet", false))
         {
@@ -717,36 +782,88 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 #endif
 
-    if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
-    {
-        if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
-            InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
-    }
-
     BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
         AddOneShot(strDest);
 
     // ********************************************************* Step 7: load blockchain
 
-    if (GetBoolArg("-loadblockindextest", false))
+    nStart = GetTimeMillis();
+    fReindex = GetBoolArg("-reindex", false);
+
+
+    // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/
+    filesystem::path blocksDir = GetDataDir() / "blocks";
+    if (!filesystem::exists(blocksDir))
     {
-        CTxDB txdb("r");
-        txdb.LoadBlockIndex();
-        PrintBlockTree();
-        return false;
+        filesystem::create_directories(blocksDir);
+        bool linked = false;
+        for (unsigned int i = 1; i < 10000; i++) {
+            filesystem::path source = GetDataDir() / strprintf("blk%04u.dat", i);
+            if (!filesystem::exists(source)) break;
+            filesystem::path dest = blocksDir / strprintf("blk%05u.dat", i-1);
+            try {
+                filesystem::create_hard_link(source, dest);
+                LogPrintf("Hardlinked %s -> %s\n", source.string().c_str(), dest.string().c_str());
+                linked = true;
+            } catch (filesystem::filesystem_error & e) {
+                // Note: hardlink creation failing is not a disaster, it just means
+                // blocks will get re-downloaded from peers.
+                LogPrintf("Error hardlinking blk%04u.dat : %s\n", i, e.what());
+                break;
+            }
+        }
+        if (linked)
+        {
+            fReindex = true;
+        }
     }
 
-    uiInterface.InitMessage(_("Loading block index..."));
+    // cache size calculations
+    size_t nTotalCache = GetArg("-dbcache", 25) << 20;
+    if (nTotalCache < (1 << 22))
+        nTotalCache = (1 << 22); // total cache cannot be less than 4 MiB
+    size_t nBlockTreeDBCache = nTotalCache / 8;
+    if (nBlockTreeDBCache > (1 << 21) && !GetBoolArg("-txindex", false))
+        nBlockTreeDBCache = (1 << 21); // block tree db cache shouldn't be larger than 2 MiB
+    nTotalCache -= nBlockTreeDBCache;
+    size_t nCoinDBCache = nTotalCache / 2; // use half of the remaining cache for coindb cache
+    nTotalCache -= nCoinDBCache;
+    nCoinCacheSize = nTotalCache / 300; // coins in memory require around 300 bytes
 
+    uiInterface.InitMessage(_("Loading block index..."));
+    LogPrintf("Loading block index...\n");
     nStart = GetTimeMillis();
 
-    if (GetBoolArg("-reindex", false)) 
-    {
-	   if (!LoadBlockIndex(true, true))
-            return InitError(_("Reindex: Error loading block index database"));
-    } else { 		
-    	if (!LoadBlockIndex())
-            return InitError(_("Error loading block index database : try running with -reindex"));
+    UnloadBlockIndex();
+    delete pcoinsTip;
+    delete pcoinsdbview;
+    delete pblocktree;
+
+    pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+    pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
+    pcoinsTip = new CCoinsViewCache(*pcoinsdbview);
+
+    if (fReindex)
+        pblocktree->WriteReindexing(true);
+
+    if (!LoadBlockIndex())
+        return InitError(_("Error loading block database"));
+
+    // If the loaded chain has a wrong genesis, bail out immediately
+    // (we're likely using a testnet datadir, or the other way around).
+    if (!mapBlockIndex.empty() && pindexGenesisBlock == NULL)
+        return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+
+    if (!InitBlockIndex())
+        return InitError(_("Error initializing block database"));
+ 
+    if (fTxIndex != GetBoolArg("-txindex", true))
+        return InitError(_("You need to rebuild the database using -reindex to change -txindex"));
+  
+    uiInterface.InitMessage(_("Verifying blocks..."));
+    if (!VerifyDB(GetArg("-checklevel", 3),
+                  GetArg("-checkblocks", 288))) {
+        return InitError("Corrupted block database detected");
     }
 
 
@@ -779,7 +896,8 @@ bool AppInit2(boost::thread_group& threadGroup)
                 CBlock block;
                 block.ReadFromDisk(pindex);
                 block.BuildMerkleTree();
-                LogPrintf("%s\n", block.ToString());
+                block.print();
+                LogPrintf("\n");
                 nFound++;
             }
         }
@@ -887,6 +1005,11 @@ bool AppInit2(boost::thread_group& threadGroup)
     LogPrintf("No wallet compiled in!\n");
 #endif // !ENABLE_WALLET
     // ********************************************************* Step 9: import blocks
+
+    // scan for better chains in the block chain database, that are not yet connected in the active best chain
+    CValidationState state;
+    if (!ConnectBestBlock(state))
+        strErrors << "Failed to connect best block";
 
     std::vector<boost::filesystem::path> vImportFiles;
     if (mapArgs.count("-loadblock"))

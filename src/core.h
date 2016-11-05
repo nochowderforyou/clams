@@ -198,6 +198,8 @@ public:
         return !(a == b);
     }
 
+    bool IsDust() const;
+
     std::string ToString() const
     {
         if (IsEmpty()) return "CTxOut(empty)";

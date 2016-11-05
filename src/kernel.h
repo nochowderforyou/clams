@@ -28,10 +28,16 @@ bool CheckStakeKernelHash(CBlockIndex* pindexPrev, unsigned int nBits, const CBl
 // Sets hashProofOfStake on success return
 bool CheckProofOfStake(CBlockIndex* pindexPrev, const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake, uint256& targetProofOfStake);
 
+// Check stake modifier hard checkpoints
+bool CheckStakeModifierCheckpoints(int nHeight, uint64 nStakeModifierChecksum);
+
 // Check whether the coinstake timestamp meets protocol
 bool CheckCoinStakeTimestamp(int nHeight, int64_t nTimeBlock, int64_t nTimeTx);
 
 // Get time weight using supplied timestamps
 int64_t GetWeight(const int64_t &nIntervalBeginning, const int64_t &nIntervalEnd);
+
+// Get time weight using supplied timestamps
+int64 GetCoinAgeWeight(int64 nIntervalBeginning, int64 nIntervalEnd);
 
 #endif // PPCOIN_KERNEL_H

@@ -1448,8 +1448,8 @@ UniValue getnotarytransaction(const UniValue& params, bool fHelp)
     for (int i = 0; pindexFirst && i < blockstogoback; i++)
     {
 
-	CBlock block;
-    	block.ReadFromDisk(pindexFirst, true);
+	    CBlock block;
+    	block.ReadFromDisk(pindexFirst);
 
     	BOOST_FOREACH (const CTransaction& tx, block.vtx)
     	{	
@@ -1852,50 +1852,6 @@ UniValue reservebalance(const UniValue& params, bool fHelp)
 }
 
 
-// ppcoin: check wallet integrity
-UniValue checkwallet(const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() > 0)
-        throw runtime_error(
-            "checkwallet\n"
-            "Check wallet for integrity.\n");
-
-    int nMismatchSpent;
-    int64_t nBalanceInQuestion;
-    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, true);
-    UniValue result(UniValue::VOBJ);
-    if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
-    else
-    {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount in question", ValueFromAmount(nBalanceInQuestion)));
-    }
-    return result;
-}
-
-
-// ppcoin: repair wallet
-UniValue repairwallet(const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() > 0)
-        throw runtime_error(
-            "repairwallet\n"
-            "Repair wallet if checkwallet reports any problem.\n");
-
-    int nMismatchSpent;
-    int64_t nBalanceInQuestion;
-    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
-    UniValue result(UniValue::VOBJ);
-    if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
-    else
-    {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
-    }
-    return result;
-}
 
 // NovaCoin: resend unconfirmed wallet transactions
 UniValue resendtx(const UniValue& params, bool fHelp)

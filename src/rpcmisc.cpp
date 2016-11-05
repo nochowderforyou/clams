@@ -178,8 +178,6 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
 
     UniValue inputs = params[0].get_array();
 
-    CTxDB txdb("r");
-    CTxIndex txindex;
     UniValue ret(UniValue::VARR);
 
     for (unsigned int idx = 0; idx < inputs.size(); idx++)
@@ -206,21 +204,26 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
         entry.push_back(Pair("vout", nOutput));
 
         CTransaction tx;
+        CCoins coins;
         uint256 hashBlock = 0;
-        CTxIndex txindex;
         COutPoint outpoint(uint256(txid), nOutput);
 
-        // find the output
-        if (!GetTransaction(uint256(txid), tx, hashBlock, txindex)) {
-            entry.push_back(Pair("status", "txid not found"));
+        if (!pcoinsTip->GetCoins(uint256(txid), coins)) {
+             entry.push_back(Pair("status", "spent"));
+             ret.push_back(entry);
+             continue;
+        }
+
+        if (!GetTransaction(uint256(txid), tx, hashBlock, true)) {
+            entry.push_back(Pair("status", "txid not found on disk"));
             ret.push_back(entry);
             continue;
         }
 
         // check that the output number is in range
-        if ((unsigned)nOutput >= tx.vout.size()) {
+        if ((unsigned)nOutput >= coins.vout.size()) {
             entry.push_back(Pair("status", "vout too high"));
-            entry.push_back(Pair("outputs", (int)tx.vout.size()));
+            entry.push_back(Pair("outputs", (int)coins.vout.size()));
             ret.push_back(entry);
             continue;
         }
@@ -262,7 +265,7 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
         }
 
         // check whether any confirmed transaction spends this output
-        if (txindex.vSpent[nOutput].IsNull()) {
+        if (!coins.vout[nOutput].IsNull()) {
             // if not, check for an unconfirmed spend
             validateoutputs_check_unconfirmed_spend(outpoint, tx, entry);
             ret.push_back(entry);
@@ -270,45 +273,10 @@ UniValue validateoutputs(const UniValue& params, bool fHelp)
         }
 
         entry.push_back(Pair("status", "spent"));
-
-        UniValue details(UniValue::VOBJ);
-        CTransaction spending_tx;
-
-        // load the transaction that spends this output
-        spending_tx.ReadFromDisk(txindex.vSpent[nOutput]);
-
-        details.push_back(Pair("txid", spending_tx.GetHash().GetHex()));
-
-        // find this output's input number in the spending transaction
-        int n = 0;
-        BOOST_FOREACH(CTxIn input, spending_tx.vin) {
-            if (input.prevout == outpoint) {
-                details.push_back(Pair("vin", n));
-                break;
-            }
-            n++;
-        }
-
-        // get the spending transaction
-        if (GetTransaction(uint256(spending_tx.GetHash()), tx, hashBlock, txindex) && hashBlock != 0) {
-            map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
-            if (mi != mapBlockIndex.end() && (*mi).second)
-            {
-                CBlockIndex* pindex = (*mi).second;
-                if (pindex->IsInMainChain()) {
-                    details.push_back(Pair("height", pindex->nHeight));
-                    details.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
-                } else {
-                    LogPrintf("can't find block with hash %s\n", hashBlock.GetHex().c_str());
-                    details.push_back(Pair("confirmations", 0));
-                }
-            }
-        }
-
-        entry.push_back(Pair("spent", details));
+        
         ret.push_back(entry);
     }
-
+    
     return ret;
 }
 
