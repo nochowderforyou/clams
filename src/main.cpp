@@ -4074,16 +4074,11 @@ void static ProcessGetData(CNode* pfrom)
                     // checkpoint, only serve it if it's in the checkpointed chain
                     if (inv.hash == pfrom->hashContinue)
                     {
-                        // Default behavior of PoS coins is to send last PoW block here which client
-                        // receives as an orphan. With CLAM we want hyper download speed so further
-                        // block (index HIGH_BLOCK_INDEX) is sent. If server does not have it yet,
-                        // then proceeds with default behavior.
+                         // Bypass PushInventory, this must send even if redundant,
+                         // and we want it right after the last block so they don't
+                         // wait for other stuff first.
                         vector<CInv> vInv;
-                        if (nBestHeight > HIGH_BLOCK_INDEX) {
-                            vInv.push_back(CInv(MSG_BLOCK, hashHighBlock));
-                        } else {
-                            vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
-                        }
+                        vInv.push_back(CInv(MSG_BLOCK, hashBestChain));
 
                         pfrom->PushMessage("inv", vInv);
                         pfrom->hashContinue = 0;

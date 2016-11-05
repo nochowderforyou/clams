@@ -72,9 +72,6 @@ static const unsigned int MEMPOOL_HEIGHT = 0x7FFFFFFF;
 /** Number bytes a transaction comment is allowed to have */
 static const unsigned int MAX_TX_COMMENT_LEN = 140; // 128 bytes + little extra
 
-static const uint256 hashHighBlock ("0xdb61f591d7fb40afa08476d6492e81a06edddf332d7027968ac130db95c07cb7");
-static const int HIGH_BLOCK_INDEX = 275000;
-
 
 inline bool IsProtocolV2(int nHeight) { return TestNet() || nHeight > 203500; }
 
