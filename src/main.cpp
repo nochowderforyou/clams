@@ -4448,7 +4448,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // Send the rest of the chain
         if (pindex)
             pindex = pindex->pnext;
-        int nLimit = 1000;
+        int nLimit = 500;
         LogPrint("net", "getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString(), nLimit);
 
         // CDC v1.3.3: detect when peers go backwards in the height of blocks that they request, which is a sign of a forked client stuck in an endless loop. if this happens too many times, ban the peer.
@@ -4458,7 +4458,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             {
                 pfrom->nHighestHeightRequested = pindex->nHeight;
             } else {
-                if (pindex->nHeight < (pfrom->nHighestHeightRequested - 500))   // peer has gone backwards in height when requesting blocks
+                if (pindex->nHeight < (pfrom->nHighestHeightRequested - 1000))   // peer has gone backwards in height when requesting blocks
                 {
                     if (pfrom->nHeightBackwardsLast < (GetTime() - 3600))  pfrom->nHeightBackwards = 0;  // reset penalty count if last backward leap was more than an hour ago
                     pfrom->nHeightBackwards++;
