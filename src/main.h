@@ -52,8 +52,8 @@ static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
 static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB
 /** The maximum number of sigops we're willing to relay/mine in a single tx */
 static const unsigned int MAX_TX_SIGOPS = MAX_BLOCK_SIGOPS/5;
-/** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
-static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750;
+/** Default for -maxorphanblocksmib, maximum number of memory to keep orphan blocks */
+static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 40;
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
 static const int64_t MIN_TX_FEE = 10000;
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying) */

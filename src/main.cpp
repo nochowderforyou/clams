@@ -88,6 +88,7 @@ map<uint256, COrphanBlock*> mapOrphanBlocks;
 map<uint256, CBlock*> mapDuplicateStakeBlocks;
 multimap<uint256, COrphanBlock*> mapOrphanBlocksByPrev;
 set<pair<COutPoint, unsigned int> > setStakeSeenOrphan;
+size_t nOrphanBlocksSize = 0;
 map<uint256, uint256> mapProofOfStake;
  
 map<uint256, CTransaction> mapOrphanTransactions;
@@ -1281,27 +1282,27 @@ uint256 WantedByOrphan(const COrphanBlock* pblockOrphan)
 // Remove a random orphan block (which does not have any dependent orphans).
 void static PruneOrphanBlocks()
 {
-    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
-        return;
-
-    // Pick a random orphan block.
-    int pos = insecure_rand() % mapOrphanBlocksByPrev.size();
-    std::multimap<uint256, COrphanBlock*>::iterator it = mapOrphanBlocksByPrev.begin();
-    while (pos--) it++;
-
-    // As long as this block has other orphans depending on it, move to one of those successors.
-    do {
-        std::multimap<uint256, COrphanBlock*>::iterator it2 = mapOrphanBlocksByPrev.find(it->second->hashBlock);
-        if (it2 == mapOrphanBlocksByPrev.end())
-            break;
-        it = it2;
-    } while(1);
-
-    setStakeSeenOrphan.erase(it->second->stake);
-    uint256 hash = it->second->hashBlock;
-    delete it->second;
-    mapOrphanBlocksByPrev.erase(it);
-    mapOrphanBlocks.erase(hash);
+    size_t nMaxOrphanBlocksSize = GetArg("-maxorphanblocksmib", DEFAULT_MAX_ORPHAN_BLOCKS) * ((size_t) 1 << 20);
+    while (nOrphanBlocksSize > nMaxOrphanBlocksSize)
+    {
+        // Pick a random orphan block.
+        int pos = insecure_rand() % mapOrphanBlocksByPrev.size();
+        std::multimap<uint256, COrphanBlock*>::iterator it = mapOrphanBlocksByPrev.begin();
+        while (pos--) it++;
+        // As long as this block has other orphans depending on it, move to one of those successors.
+        do {
+            std::multimap<uint256, COrphanBlock*>::iterator it2 = mapOrphanBlocksByPrev.find(it->second->hashBlock);
+            if (it2 == mapOrphanBlocksByPrev.end())
+                break;
+            it = it2;
+        } while(1);
+        setStakeSeenOrphan.erase(it->second->stake);
+        uint256 hash = it->second->hashBlock;
+        nOrphanBlocksSize -= it->second->vchBlock.size();
+        delete it->second;
+        mapOrphanBlocksByPrev.erase(it);
+        mapOrphanBlocks.erase(hash);
+    }
 }
  
 int generateMTRandom(unsigned int s, int range)
@@ -3211,6 +3212,7 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
             pblock2->hashBlock = hash;
             pblock2->hashPrev = pblock->hashPrevBlock;
             pblock2->stake = pblock->GetProofOfStake();
+            nOrphanBlocksSize += pblock2->vchBlock.size();
             mapOrphanBlocks.insert(make_pair(hash, pblock2));
             mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));
             if (pblock->IsProofOfStake())
@@ -3250,6 +3252,7 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
                 vWorkQueue.push_back(mi->second->hashBlock);
             mapOrphanBlocks.erase(mi->second->hashBlock);
             setStakeSeenOrphan.erase(block.GetProofOfStake());
+            nOrphanBlocksSize -= mi->second->vchBlock.size();
             delete mi->second;
         }
         mapOrphanBlocksByPrev.erase(hashPrev);
