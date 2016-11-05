@@ -2089,9 +2089,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     uint256 hashProofOfStake = 0;
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        if (!pcoin.first->hash)
-            pcoin.first->hash = pcoin.first->GetHash();
-        
         CTransaction tx;
         uint256 hashBlock = 0;
         {
@@ -2278,14 +2275,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         }
     } else {
         // we're not splitting the output, so attempt to add more inputs
-        BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
-        {
-            // Only add coins of the same key/address as kernel, or if fCombineAny is true
-            if ((fCombineAny ||
-                 pcoin.first->vout[pcoin.second].scriptPubKey == scriptPubKeyKernel ||
-                 pcoin.first->vout[pcoin.second].scriptPubKey == txNew.vout[1].scriptPubKey) &&
-                (pcoin.first->hash != txNew.vin[0].prevout.hash ||
-                 pcoin.second != txNew.vin[0].prevout.n))
+        if (nCredit <= nCombineLimit) {
+            BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
             {
                 // Only add coins of the same key/address as kernel, or if fCombineAny is true
                 if (fCombineAny ||
@@ -2301,9 +2292,10 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                         nCredit + pcoin.first->vout[pcoin.second].nValue > nBalance - nReserveBalance)  // or we have reached the reserve limit
                         break;
 
-                txNew.vin.push_back(CTxIn(pcoin.first->hash, pcoin.second));
-                nCredit += pcoin.first->vout[pcoin.second].nValue;
-                vwtxPrev.push_back(pcoin.first);
+                    txNew.vin.push_back(CTxIn(pcoin.first->hash, pcoin.second));
+                    nCredit += pcoin.first->vout[pcoin.second].nValue;
+                    vwtxPrev.push_back(pcoin.first);
+                }
             }
         }
 
