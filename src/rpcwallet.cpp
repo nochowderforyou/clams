@@ -596,11 +596,12 @@ int64_t GetAccountBalance(const string& strAccount, int nMinDepth)
 
 UniValue getbalance(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() > 2)
+    if (fHelp || params.size() > 3)
         throw runtime_error(
-            "getbalance [account] [minconf=1]\n"
+            "getbalance [account] [minconf=1] [matureonly=true]\n"
             "If [account] is not specified, returns the server's total available balance.\n"
-            "If [account] is specified, returns the balance in the account.");
+            "If [account] is specified, returns the balance in the account.\n"
+            "If [matureonly] is false, immature coins will be included. [matureonly] doesn't work with the deprecated account API.");
 
     if (params.size() == 0)
         return  ValueFromAmount(pwalletMain->GetBalance());
@@ -608,6 +609,9 @@ UniValue getbalance(const UniValue& params, bool fHelp)
     int nMinDepth = 1;
     if (params.size() > 1)
         nMinDepth = params[1].get_int();
+    bool fMatureOnly = true;
+    if (params.size() > 2)
+        fMatureOnly = params[2].get_bool();
 
     if (params[0].get_str() == "*") {
         // Calculate total balance a different way from GetBalance()
@@ -625,7 +629,7 @@ UniValue getbalance(const UniValue& params, bool fHelp)
             list<pair<CTxDestination, int64_t> > listReceived;
             list<pair<CTxDestination, int64_t> > listSent;
             wtx.GetAmounts(listReceived, listSent, allFee, strSentAccount);
-            if (wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
+            if (wtx.GetDepthInMainChain() >= nMinDepth && (fMatureOnly && wtx.GetBlocksToMaturity() == 0))
             {
                 BOOST_FOREACH(const PAIRTYPE(CTxDestination,int64_t)& r, listReceived)
                     nBalance += r.second;
