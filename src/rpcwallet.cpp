@@ -604,11 +604,12 @@ UniValue getbalance(const UniValue& params, bool fHelp)
             "If [matureonly] is false, immature coins will be included. [matureonly] doesn't work with the deprecated account API.");
 
     if (params.size() == 0)
-        return  ValueFromAmount(pwalletMain->GetBalance());
+        return ValueFromAmount(pwalletMain->GetBalance());
 
     int nMinDepth = 1;
     if (params.size() > 1)
         nMinDepth = params[1].get_int();
+
     bool fMatureOnly = true;
     if (params.size() > 2)
         fMatureOnly = params[2].get_bool();
@@ -629,16 +630,19 @@ UniValue getbalance(const UniValue& params, bool fHelp)
             list<pair<CTxDestination, int64_t> > listReceived;
             list<pair<CTxDestination, int64_t> > listSent;
             wtx.GetAmounts(listReceived, listSent, allFee, strSentAccount);
-            if (wtx.GetDepthInMainChain() >= nMinDepth && (fMatureOnly && wtx.GetBlocksToMaturity() == 0))
+            // maybe process received into nBalance
+            if (wtx.GetDepthInMainChain() >= nMinDepth && (wtx.GetBlocksToMaturity() == 0 || !fMatureOnly))
             {
                 BOOST_FOREACH(const PAIRTYPE(CTxDestination,int64_t)& r, listReceived)
-                    nBalance += r.second;
+                    nBalance += r.second;  
             }
+            // process sent into nBalance
             BOOST_FOREACH(const PAIRTYPE(CTxDestination,int64_t)& r, listSent)
                 nBalance -= r.second;
+            // process fee into nBalance
             nBalance -= allFee;
         }
-        return  ValueFromAmount(nBalance);
+        return ValueFromAmount(nBalance);
     }
 
     throw runtime_error("getbalance doesn't work for specific accounts.");
