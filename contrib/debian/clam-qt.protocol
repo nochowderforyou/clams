@@ -1,6 +1,6 @@
 [Protocol]
-exec=novacoin-qt '%u'
-protocol=novacoin
+exec=clam-qt '%u'
+protocol=clams
 input=none
 output=none
 helper=true

@@ -1,0 +1,6 @@
+debian/bin/clam-qt usr/bin
+src/qt/clam-qt usr/lib/clam/
+share/pixmaps/clams32.xpm usr/share/pixmaps
+share/pixmaps/clams80.xpm usr/share/pixmaps
+debian/clam-qt.desktop usr/share/applications
+debian/clam-qt.protocol usr/share/kde4/services/

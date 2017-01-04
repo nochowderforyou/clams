@@ -24,7 +24,7 @@ qrc_*.cpp
 build
 
 !src/leveldb/Makefile
-clamd
+src/clamd
 configure
 aclocal.m4
 bitcoin-config.h.in

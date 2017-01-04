@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Clams
+Comment=Clams P2P Cryptocurrency
+Comment[fr]=Clams, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=Clams, eşten eşe kriptografik sanal para birimi
+Exec=/usr/bin/clam-qt
+Terminal=false
+Type=Application
+Icon=/usr/share/pixmaps/clams80.xpm
+MimeType=x-scheme-handler/clams;
+Categories=Office;

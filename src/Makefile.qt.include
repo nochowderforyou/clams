@@ -197,7 +197,7 @@ BITCOIN_QT_H = \
 RES_ICONS = \
   qt/res/icons/add.png \
   qt/res/icons/address-book.png \
-  qt/res/icons/bitcoin.icns \
+  qt/res/icons/clam.icns \
   qt/res/icons/clam.png \
   qt/res/icons/clam.ico \
   qt/res/icons/clam-16.png \
