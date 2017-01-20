@@ -975,19 +975,12 @@ bool CBlock::ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions)
     return true;
 }
 
-uint256 static GetOrphanRoot(const uint256& hash)
+uint256 static GetOrphanRoot(const COrphanBlock* pblock)
 {
-    map<uint256, COrphanBlock*>::iterator it = mapOrphanBlocks.find(hash);
-    if (it == mapOrphanBlocks.end())
-        return hash;
-
     // Work back to the first block in the orphan chain
-    do {
-        map<uint256, COrphanBlock*>::iterator it2 = mapOrphanBlocks.find(it->second->hashPrev);
-        if (it2 == mapOrphanBlocks.end())
-            return it->first;
-        it = it2;
-    } while(true);
+    while (mapOrphanBlocks.count(pblock->hashPrev))
+        pblock = mapOrphanBlocks[pblock->hashPrev];
+    return pblock->hashBlock;
 }
  
 // ppcoin: find block wanted by given orphan block
@@ -2586,36 +2579,15 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (mapOrphanBlocks.count(hash))
         return error("ProcessBlock() : already have block (orphan) %s", hash.ToString());
 
-    CBlockIndex* pPrev = NULL;
-    map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pblock->hashPrevBlock);
-    if (mi != mapBlockIndex.end())
-        pPrev = (*mi).second;
-
-    // ppcoin: check proof-of-stake
-    // Limited duplicity on stake: prevents block flood attack
-    // Duplicate stake allowed only when there is orphan child block
-    if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
-        return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString(), pblock->GetProofOfStake().second, hash.ToString());
-
     // Preliminary checks
     if (!pblock->CheckBlock())
         return error("ProcessBlock() : CheckBlock FAILED");
 
-    uint256 hashProof;
-    // ppcoin: verify hash target and signature of coinstake tx
-    if (pPrev && pblock->IsProofOfStake())
-    {
-        uint256 hashProofOfStake = 0;
-        if (!CheckProofOfStake(pPrev, pblock->vtx[1], pblock->nBits, hashProof, hashProofOfStake))
-        {
-        // Ignore CheckProofOfStake() failure for hashHighBlock in order to speed up initial
-        // blockchain download.
-            if (pblock->GetHash() != hashHighBlock) {
-               //printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
-            }
-        }
-    }
+    // ppcoin: check proof-of-stake
+    // Limited duplicity on stake: prevents block flood attack
+    // Duplicate stake allowed only when there is orphan child block
+    if (!fReindex && !fImporting && pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash))
+        return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString(), pblock->GetProofOfStake().second, hash.ToString());
 
     CBlockIndex* pcheckpoint = Checkpoints::GetLastSyncCheckpoint();
     if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
@@ -2678,7 +2650,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
                 setStakeSeenOrphan.insert(pblock->GetProofOfStake());
 
             // Ask this guy to fill in what we're missing
-            PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(hash));
+            PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(pblock2));
             // ppcoin: getblocks may not obtain the ancestor block rejected
             // earlier by duplicate-stake check so we ask for it again directly
             if (!IsInitialBlockDownload())
@@ -3249,12 +3221,7 @@ void static ProcessGetData(CNode* pfrom)
                         // block (index HIGH_BLOCK_INDEX) is sent. If server does not have it yet,
                         // then proceeds with default behavior.
                         vector<CInv> vInv;
-                        if (nBestHeight > HIGH_BLOCK_INDEX) {
-                            vInv.push_back(CInv(MSG_BLOCK, hashHighBlock));
-                        } else {
-                            vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
-                        }
-
+                        vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
                         pfrom->PushMessage("inv", vInv);
                         pfrom->hashContinue = 0;
                     }
@@ -3443,28 +3410,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString(), addrFrom.ToString(), pfrom->addr.ToString());
 
 
-
-    // Be more aggressive with blockchain download. Send new getblocks() message after connection
-    // to new node if waited longer than MAX_TIME_SINCE_BEST_BLOCK.
-    int64 TimeSinceBestBlock = GetTime() - nTimeBestReceived;
-    if (TimeSinceBestBlock > MAX_TIME_SINCE_BEST_BLOCK) {
-        //LogPrintf("INFO: Waiting %d sec which is too long. Sending GetBlocks(0)\n", TimeSinceBestBlock);
-        PushGetBlocks(pfrom, pindexBest, uint256(0));
-    }
-
-        // ppcoin: ask for pending sync-checkpoint if any
-        if (!IsInitialBlockDownload())
-            Checkpoints::AskForPendingSyncCheckpoint(pfrom);
-
-        // CDC v1.3.3: reset counts to detect forked peers
-        pfrom->nHighestHeightRequested = 0;  /* CDC v1.3.3 */
-        pfrom->nHeightBackwards = 0;  /* CDC v1.3.3 */
-        pfrom->nHeightBackwardsLast = GetTime();  /* CDC v1.3.3 */
-
-        pfrom->nTimeOffset = nTime - GetTime();
-
+        int64_t nTimeOffset = nTime - GetTime();
+        pfrom->nTimeOffset = nTimeOffset;
         if (GetBoolArg("-synctime", true))
-            AddTimeData(pfrom->addr, nTime);
+            AddTimeData(pfrom->addr, nTimeOffset);
     }
 
 
@@ -3584,7 +3533,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 if (!fImporting)
                     pfrom->AskFor(inv);
             } else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {
-                PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(inv.hash));
+                PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
             } else if (nInv == nLastBlock) {
                 // In case we are on a very long side-chain, it is possible that we already have
                 // the last block in an inv bundle sent in response to getblocks. Try to detect
