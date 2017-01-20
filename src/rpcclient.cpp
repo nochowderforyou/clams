@@ -109,6 +109,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getnotarytransaction", 1 },
     { "getnotarytransaction", 2 },
     { "getbalance", 1 },
+    { "getbalance", 2 },
     { "getblock", 1 },
     { "getblock", 2 },
     { "getblockbynumber", 0 },
