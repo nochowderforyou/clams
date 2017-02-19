@@ -74,7 +74,7 @@ inline int64_t PastDrift(int64_t nTime, int nHeight)   { return IsProtocolV2(nHe
 
 inline int64_t FutureDriftV1(int64_t nTime) { return nTime + 10 * 60; }
 inline int64_t FutureDriftV2(int64_t nTime) { return nTime + 15; }
-inline int64_t FutureDrift(int64_t nTime, int nHeight) { return IsProtocolV2(nHeight) ? FutureDriftV2(nTime) : FutureDriftV1(nTime); }
+inline int64_t FutureDrift(int64_t nTime, int nHeight) { return (!nHeight || IsProtocolV2(nHeight)) ? FutureDriftV2(nTime) : FutureDriftV1(nTime); }
 
 static const int64 MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 extern CScript COINBASE_FLAGS;
