@@ -20,7 +20,6 @@
 class CAddrMan;
 class CBlockLocator;
 class CDiskBlockIndex;
-class CDiskTxPos;
 class COutPoint;
 class CWallet;
 class CWalletTx;
