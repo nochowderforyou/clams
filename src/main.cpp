@@ -326,7 +326,7 @@ bool AddOrphanTx(const CTransaction& tx)
  
     if (nSize > 5000)
     {
-        LogPrint("mempool", "ignoring large orphan tx (size: %"PRIszu", hash: %s)\n", nSize, hash.ToString());
+        LogPrint("mempool", "ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString());
         return false;
     }
  
@@ -334,7 +334,7 @@ bool AddOrphanTx(const CTransaction& tx)
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
 
-    LogPrint("mempool", "stored orphan tx %s (mapsz %"PRIszu")\n", hash.ToString(),
+    LogPrint("mempool", "stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString(),
         mapOrphanTransactions.size());
     return true;
 }
@@ -942,7 +942,7 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fLimitFr
 
     SyncWithWallets(tx, NULL);
 
-    LogPrint("mempool", "AcceptToMemoryPool : accepted %s (poolsz %"PRIszu")\n",
+    LogPrint("mempool", "AcceptToMemoryPool : accepted %s (poolsz %" PRIszu ")\n",
            hash.ToString(),
            mapTx.size());
     return true;
@@ -2297,8 +2297,8 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
     reverse(vConnect.begin(), vConnect.end());
 
     if (vDisconnect.size() > 0) {
-        LogPrintf("REORGANIZE: Disconnect %"PRIszu" blocks; %s..\n", vDisconnect.size(), pfork->GetBlockHash().ToString().c_str());
-        LogPrintf("REORGANIZE: Connect %"PRIszu" blocks; ..%s\n", vConnect.size(), pindexNew->GetBlockHash().ToString().c_str());
+        LogPrintf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..\n", vDisconnect.size(), pfork->GetBlockHash().ToString().c_str());
+        LogPrintf("REORGANIZE: Connect %" PRIszu " blocks; ..%s\n", vConnect.size(), pindexNew->GetBlockHash().ToString().c_str());
     }
 
     // Disconnect shorter branch
@@ -3190,7 +3190,7 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
 
     if (pblock->hashPrevBlock != 0 && !mapBlockIndex.count(pblock->hashPrevBlock))
     {
-        LogPrintf("ProcessBlock: ORPHAN BLOCK %d, %"PRIszu" MB out of %"PRIszu", prev=%s\n", mapOrphanBlocks.size(), nOrphanBlocksSize, GetArg("-maxorphanblocksmib", DEFAULT_MAX_ORPHAN_BLOCKS) * ((size_t) 1 << 20), pblock->hashPrevBlock.ToString());
+        LogPrintf("ProcessBlock: ORPHAN BLOCK %d (%.3f MB of %d) prev=%s\n", mapOrphanBlocks.size(), nOrphanBlocksSize/1024.0/1024, GetArg("-maxorphanblocksmib", DEFAULT_MAX_ORPHAN_BLOCKS), pblock->hashPrevBlock.ToString());
 
         // Accept orphans as long as there is a node to request its parents from
         if (pfrom) {
@@ -3258,7 +3258,8 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
         mapOrphanBlocksByPrev.erase(hashPrev);
     }
 
-    LogPrintf("ProcessBlock: ACCEPTED\n");
+    if (fDebug)
+        LogPrintf("ProcessBlock: ACCEPTED\n");
 
     return true;
 }
@@ -3841,7 +3842,7 @@ void PrintBlockTree()
         // print item
         CBlock block;
         block.ReadFromDisk(pindex);
-        LogPrintf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %"PRIszu"",
+        LogPrintf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "",
             pindex->nHeight,
             pindex->nFile,
             pindex->GetBlockPos().nPos,
@@ -4139,7 +4140,7 @@ void static ProcessGetData(CNode* pfrom)
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
     RandAddSeedPerfmon();
-    LogPrint("net", "received: %s (%"PRIszu" bytes)\n", strCommand, vRecv.size());
+    LogPrint("net", "received: %s (%" PRIszu " bytes)\n", strCommand, vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
         LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
@@ -4309,7 +4310,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (vAddr.size() > 1000)
         {
             pfrom->Misbehaving(20);
-            return error("message addr size() = %"PRIszu"", vAddr.size());
+            return error("message addr size() = %" PRIszu "", vAddr.size());
         }
 
         // Store the new addresses
@@ -4371,7 +4372,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (vInv.size() > MAX_INV_SZ)
         {
             pfrom->Misbehaving(20);
-            return error("message inv size() = %"PRIszu"", vInv.size());
+            return error("message inv size() = %" PRIszu "", vInv.size());
         }
 
         // find last block in inv vector
@@ -4420,11 +4421,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (vInv.size() > MAX_INV_SZ)
         {
             pfrom->Misbehaving(20);
-            return error("message getdata size() = %"PRIszu"", vInv.size());
+            return error("message getdata size() = %" PRIszu "", vInv.size());
         }
 
         if (fDebug || (vInv.size() != 1))
-            LogPrint("net", "received getdata (%"PRIszu" invsz)\n", vInv.size());
+            LogPrint("net", "received getdata (%" PRIszu " invsz)\n", vInv.size());
 
         if ((fDebug && vInv.size() > 0) || (vInv.size() == 1))
             LogPrint("net", "received getdata for: %s\n", vInv[0].ToString());

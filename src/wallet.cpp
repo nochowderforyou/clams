@@ -169,7 +169,7 @@ bool CWallet::LoadCScript(const CScript& redeemScript)
     if (redeemScript.size() > MAX_SCRIPT_ELEMENT_SIZE)
     {
         std::string strAddr = CBitcoinAddress(redeemScript.GetID()).ToString();
-        LogPrintf("%s: Warning: This wallet contains a redeemScript of size %"PRIszu" which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
+        LogPrintf("%s: Warning: This wallet contains a redeemScript of size %" PRIszu " which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
             __func__, redeemScript.size(), MAX_SCRIPT_ELEMENT_SIZE, strAddr);
         return true;
     }
@@ -654,16 +654,16 @@ void CWallet::StakeTransaction(const CScript& script, int64_t nStakeReward, bool
 
     std::string addr(CBitcoinAddress(address).ToString());
     if (!::IsMine(*this, address)) {
-        LogPrintf("stake %s for %s; not mine\n", FormatMoney(nStakeReward), addr);
+        LogPrint("stake", "stake %s for %s; not mine\n", FormatMoney(nStakeReward), addr);
         return;
     }
 
     mapAddressRewards["*"] += nStakeReward;
     mapAddressRewards[addr] += nStakeReward;
-    LogPrintf("stake %s for %s; global = %s, address = %s\n",
-              FormatMoney(nStakeReward), addr,
-              FormatMoney(mapAddressRewards["*"]),
-              FormatMoney(mapAddressRewards[addr]));
+    LogPrint("stake", "stake %s for %s; global = %s, address = %s\n",
+             FormatMoney(nStakeReward), addr,
+             FormatMoney(mapAddressRewards["*"]),
+             FormatMoney(mapAddressRewards[addr]));
 
     std::string strCmd = GetArg("-stakenotify", "");
 
@@ -2736,7 +2736,7 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
             if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
                 throw runtime_error("TopUpKeyPool() : writing generated key failed");
             setKeyPool.insert(nEnd);
-            LogPrintf("keypool added key %d, size=%"PRIszu"\n", nEnd, setKeyPool.size());
+            LogPrintf("keypool added key %d, size=%" PRIszu "\n", nEnd, setKeyPool.size());
         }
     }
     return true;
