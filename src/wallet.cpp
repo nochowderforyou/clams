@@ -654,16 +654,16 @@ void CWallet::StakeTransaction(const CScript& script, int64_t nStakeReward, bool
 
     std::string addr(CBitcoinAddress(address).ToString());
     if (!::IsMine(*this, address)) {
-        LogPrintf("stake %s for %s; not mine\n", FormatMoney(nStakeReward), addr);
+        LogPrint("stake", "stake %s for %s; not mine\n", FormatMoney(nStakeReward), addr);
         return;
     }
 
     mapAddressRewards["*"] += nStakeReward;
     mapAddressRewards[addr] += nStakeReward;
-    LogPrintf("stake %s for %s; global = %s, address = %s\n",
-              FormatMoney(nStakeReward), addr,
-              FormatMoney(mapAddressRewards["*"]),
-              FormatMoney(mapAddressRewards[addr]));
+    LogPrint("stake", "stake %s for %s; global = %s, address = %s\n",
+             FormatMoney(nStakeReward), addr,
+             FormatMoney(mapAddressRewards["*"]),
+             FormatMoney(mapAddressRewards[addr]));
 
     std::string strCmd = GetArg("-stakenotify", "");
 
