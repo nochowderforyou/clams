@@ -247,7 +247,7 @@ struct CDiskBlockPos
 struct CDiskTxPos : public CDiskBlockPos
 {
     unsigned int nTxOffset; // after header
-     unsigned int nTxPos;
+    unsigned int nTxPos;
 
     IMPLEMENT_SERIALIZE(
         READWRITE(*(CDiskBlockPos*)this);
