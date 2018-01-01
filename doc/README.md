@@ -6,7 +6,7 @@ Copyright (c) 2014 Clam Developers
 
 Setup
 ---------------------
-[Clam Core](http://clamclient.com/download) is the original clam client and it builds the backbone of the network. However, it downloads and stores the entire history of Clam transactions (which is currently several GBs); depending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more. Thankfully you only have to do this once. If you would like the process to go faster you can [download the blockchain directly](bootstrap.md).
+[Clam Core](http://clamclient.com/download) is the original clam client and it builds the backbone of the network. However, it downloads and stores the entire history of Clam transactions (which is currently several GBs); depending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more. Thankfully you only have to do this once. If you would like the process to go faster you can [download the blockchain directly](https://bitcointalk.org/index.php?topic=623147.msg9772191#msg9772191).
 
 Running
 ---------------------
