@@ -3719,7 +3719,7 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
     }
-    if (pindex == NULL)
+    if (pindex == NULL && !state.IsInvalid();
         pindex = AddToBlockIndex(block);
 
     if (ppindex)
