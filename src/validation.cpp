@@ -3038,16 +3038,17 @@ CBlockIndex* AddToBlockIndex(const CBlockHeader& block)
 
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
     if (pindexBestHeader == NULL || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+    {
         pindexBestHeader = pindexNew;
 
-    // Add to current best branch
-    if (pindexNew->pprev) {
-        pindexNew->pprev->pnext = pindexNew;
-        setDirtyBlockIndex.insert(pindexNew->pprev);
-    }
-    setDirtyBlockIndex.insert(pindexNew);
-
-    return pindexNew;
+		// Add to current best branch
+		if (pindexNew->pprev) {
+			pindexNew->pprev->pnext = pindexBestHeader;
+			setDirtyBlockIndex.insert(pindexNew->pprev);
+		}
+		setDirtyBlockIndex.insert(pindexBestHeader);
+	}
+    return pindexBestHeader;
 }
 
 /** Mark a block as having its data received and checked (up to BLOCK_VALID_TRANSACTIONS). */
@@ -3770,7 +3771,7 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
         if (!ContextualCheckBlockHeader(block, state, chainparams.GetConsensus(), pindexPrev, GetAdjustedTime()))
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
     }
-    if (pindex == NULL)
+    if (pindex == NULL && !state.IsInvalid();
         pindex = AddToBlockIndex(block);
 
     if (ppindex)
